@@ -6,7 +6,7 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "potret-kehidupan"
-database_id = "GANTI_DENGAN_DATABASE_ID"
+database_id = "8fd3d862-93f4-4092-a26d-bbc310d13d4a"
 
 # Buat bucket R2 bernama potret-kehidupan-media, lalu hubungkan binding ini.
 [[r2_buckets]]
