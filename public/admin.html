@@ -140,7 +140,7 @@
   async function login(candidate, remember) {
     say($("loginMsg"), "Memeriksa token…");
     try {
-      var res = await fetch("/api/auth-check", { method: "POST", headers: { Authorization: "Bearer " + candidate } });
+      var res = await fetch("/api/admin/auth-check", { method: "POST", headers: { Authorization: "Bearer " + candidate } });
       if (!res.ok) {
         say($("loginMsg"), "Token salah, atau secret ADMIN_TOKEN belum aktif di Cloudflare.", "err");
         return false;
@@ -224,7 +224,7 @@
     try {
       var headers = authHeaders();
       headers["Content-Type"] = "application/json";
-      var res = await fetch("/api/photos/" + p.id, {
+      var res = await fetch("/api/admin/photos/" + p.id, {
         method: "PUT",
         headers: headers,
         body: JSON.stringify({ src: p.src, alt: p.alt, caption: p.caption, size: p.size, sort_order: firstSort - 1, is_published: true })
@@ -241,7 +241,7 @@
     if (!confirm('Hapus foto "' + p.caption + '"? Ini tidak bisa dibatalkan.')) return;
     btn.disabled = true;
     try {
-      var res = await fetch("/api/photos/" + p.id, { method: "DELETE", headers: authHeaders() });
+      var res = await fetch("/api/admin/photos/" + p.id, { method: "DELETE", headers: authHeaders() });
       if (!res.ok) throw new Error("HTTP " + res.status);
       loadGallery();
     } catch (e) {
@@ -413,7 +413,7 @@
         form.append("height", String(shrunk.height));
         form.append("size", item.size === "auto" ? autoSize(shrunk.width, shrunk.height) : item.size);
         setStatus("Mengunggah (" + Math.round(shrunk.blob.size / 1024) + " KB)…");
-        var res = await fetch("/api/photo-upload", { method: "POST", headers: authHeaders(), body: form });
+        var res = await fetch("/api/admin/photo-upload", { method: "POST", headers: authHeaders(), body: form });
         if (!res.ok) {
           var detail = "";
           try { detail = (await res.json()).error || ""; } catch (e) {}

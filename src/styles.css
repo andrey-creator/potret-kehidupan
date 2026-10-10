@@ -51,6 +51,7 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
 .site-footer { padding-bottom: 1.5rem; }
 .footer-meta { align-items: flex-start; padding-block: 1rem 0; text-transform: none; letter-spacing: .02em; }
 .footer-name { font-size: .82rem; letter-spacing: 0; }
+.header-links { display: flex; gap: 1.25rem; }
 .footer-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .9rem 1.5rem; }
 .social-link { color: var(--muted); text-decoration: none; transition: color .25s ease; }
 .social-link:hover { color: var(--ink); }
@@ -84,6 +85,8 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
 @media (max-width: 520px) {
   .site-header { padding-bottom: 4.5rem; }
   .header-meta, .footer-meta { font-size: .59rem; }
+  .header-meta { flex-wrap: wrap; row-gap: .5rem; }
+  .header-links { order: 3; width: 100%; }
   .gallery-heading { margin-bottom: .85rem; }
   .gallery { gap: 2.8rem .65rem; }
   .photo-caption { display: block; padding-top: .65rem; }

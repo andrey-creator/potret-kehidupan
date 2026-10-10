@@ -1,34 +1,6 @@
-type PhotoSize = "regular" | "wide" | "tall";
+import type { Photo } from "./types.js";
 
-type Photo = {
-  id?: number;
-  src: string;
-  alt: string;
-  caption: string;
-  size: PhotoSize;
-  sort_order?: number;
-  width?: number | null;
-  height?: number | null;
-};
-
-const fallbackPhotos: Photo[] = [
-  { src: "https://picsum.photos/seed/potret-01/1400/1750", alt: "Cahaya pagi di balik jendela", caption: "Pagi datang perlahan.", size: "tall" },
-  { src: "https://picsum.photos/seed/potret-02/1600/1000", alt: "Jalan panjang dengan bayangan pepohonan", caption: "Jalan yang pernah kita pilih.", size: "wide" },
-  { src: "https://picsum.photos/seed/potret-03/1200/1600", alt: "Kursi kosong di ruang yang tenang", caption: "Tempat sunyi menyimpan cerita.", size: "regular" },
-  { src: "https://picsum.photos/seed/potret-04/1200/1600", alt: "Tangan memegang bunga kecil", caption: "Hal kecil, rasa yang besar.", size: "regular" },
-  { src: "https://picsum.photos/seed/potret-05/1600/1000", alt: "Langit sore berwarna lembut", caption: "Sore yang masih tinggal.", size: "wide" },
-  { src: "https://picsum.photos/seed/potret-06/1200/1600", alt: "Bangku taman di bawah cahaya", caption: "Berhenti sebentar di sini.", size: "tall" },
-  { src: "https://picsum.photos/seed/potret-07/1200/1600", alt: "Detail arsitektur dan cahaya", caption: "Cahaya menemukan jalannya.", size: "regular" },
-  { src: "https://picsum.photos/seed/potret-08/1600/1000", alt: "Pemandangan laut dari kejauhan", caption: "Jauh, namun terasa dekat.", size: "wide" },
-  { src: "https://picsum.photos/seed/potret-09/1200/1600", alt: "Buku terbuka di atas meja", caption: "Halaman yang belum selesai.", size: "regular" },
-  { src: "https://picsum.photos/seed/potret-10/1200/1600", alt: "Siluet seseorang di senja hari", caption: "Kita tumbuh dari perjalanan.", size: "tall" },
-  { src: "https://picsum.photos/seed/potret-11/1600/1000", alt: "Pemandangan kota dari atas", caption: "Ramai yang tetap terasa hening.", size: "wide" },
-  { src: "https://picsum.photos/seed/potret-12/1200/1600", alt: "Daun hijau terkena embun", caption: "Pagi meninggalkan jejak.", size: "regular" },
-  { src: "https://picsum.photos/seed/potret-13/1200/1600", alt: "Jendela dengan tirai putih", caption: "Rumah adalah suara-suara kecil.", size: "regular" },
-  { src: "https://picsum.photos/seed/potret-14/1600/1000", alt: "Awan tipis di atas bukit", caption: "Langit selalu punya ruang.", size: "wide" },
-  { src: "https://picsum.photos/seed/potret-15/1200/1600", alt: "Sepeda bersandar di dinding", caption: "Pulang lewat jalan berbeda.", size: "tall" },
-  { src: "https://picsum.photos/seed/potret-16/1200/1600", alt: "Cangkir di dekat cahaya pagi", caption: "Hari ini cukup untuk dikenang.", size: "regular" }
-];
+const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
 
 const gallery = document.querySelector<HTMLElement>("#gallery");
 const featured = document.querySelector<HTMLElement>("#featured");
@@ -77,6 +49,13 @@ function renderFeatured(item: Photo): void {
     </figcaption>
   `;
   featured.hidden = false;
+}
+
+function renderMessage(text: string, count: string): void {
+  if (!gallery || !galleryCount) return;
+  if (loading) loading.remove();
+  galleryCount.textContent = count;
+  gallery.innerHTML = `<p class="gallery-loading" role="status">${escapeHtml(text)}</p>`;
 }
 
 function renderGallery(): void {
@@ -138,15 +117,32 @@ function closeLightbox(): void {
 
 function moveLightbox(step: number): void { showLightbox(activeIndex + step); }
 
+async function loadDevPhotos(): Promise<Photo[]> {
+  const { fallbackPhotos } = await import("./dev-photos.js");
+  return fallbackPhotos;
+}
+
 async function loadPhotos(): Promise<void> {
   try {
     const response = await fetch("/api/photos", { headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error(`API ${response.status}`);
-    const remotePhotos = await response.json() as Photo[];
-    photos = remotePhotos.length > 0 ? remotePhotos : fallbackPhotos;
+    photos = await response.json() as Photo[];
   } catch (error) {
-    console.info("API galeri belum terhubung; memakai placeholder lokal.", error);
-    photos = fallbackPhotos;
+    console.error("Galeri gagal dimuat.", error);
+    if (isLocalPreview) {
+      photos = await loadDevPhotos();
+    } else {
+      renderMessage("Galeri belum bisa dimuat. Muat ulang halaman beberapa saat lagi.", "—");
+      return;
+    }
+  }
+  if (photos.length === 0) {
+    if (isLocalPreview) {
+      photos = await loadDevPhotos();
+    } else {
+      renderMessage("Belum ada momen yang ditampilkan.", "0");
+      return;
+    }
   }
   renderGallery();
 }

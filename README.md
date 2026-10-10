@@ -47,45 +47,55 @@ PHOTOS   → R2 bucket
 
 ## Endpoint API
 
-### Publik
+### Publik (tanpa login)
 
 ```text
-GET /api/photos
-GET /api/photos/:id
-GET /api/media/:key
+GET /api/photos          # foto yang published
+GET /api/photos/:id      # hanya foto published
+GET /api/img/:id         # file foto yang disimpan di D1
+GET /api/media/:key      # file foto di R2 (opsional)
 ```
 
-### Admin dengan token
+### Admin (semua di bawah /api/admin/*)
 
-Gunakan header berikut pada endpoint admin:
+Semua endpoint tulis dikumpulkan di `/api/admin/*` agar bisa dilindungi Cloudflare Access dengan satu aturan path, tanpa mengganggu galeri publik. Selain Access, setiap endpoint tetap meminta header:
 
 ```text
 Authorization: Bearer <ADMIN_TOKEN>
 ```
 
-Endpoint tersedia:
-
 ```text
-POST   /api/photos       # tambah metadata foto
-PUT    /api/photos/:id  # ubah metadata foto
-DELETE /api/photos/:id  # hapus metadata foto
-POST   /api/upload      # upload file gambar ke R2
+POST   /api/admin/auth-check
+POST   /api/admin/photo-upload     # upload foto (disimpan di D1) + metadata
+POST   /api/admin/photos           # tambah metadata foto
+PUT    /api/admin/photos/:id       # ubah metadata foto
+DELETE /api/admin/photos/:id       # hapus foto
+POST   /api/admin/upload           # upload ke R2 (butuh binding PHOTOS)
 ```
 
-Contoh menambah metadata:
+Halaman admin ada di `/admin`.
 
-```bash
-curl -X POST https://DOMAIN-ANDA/api/photos \
-  -H "Authorization: Bearer $ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"src":"/api/media/gallery/foto.webp","alt":"Foto keluarga","caption":"Hari yang ingin diingat.","size":"wide","sort_order":20}'
-```
+## Mengamankan admin dengan Cloudflare Access
 
-Untuk production, token admin sederhana ini sebaiknya dikembangkan menjadi autentikasi pengguna sebelum panel admin dibuka untuk orang lain. Website publik sendiri tidak memiliki form atau panel admin, sehingga fokus album tetap terjaga.
+1. Cloudflare Dashboard → **Zero Trust** → **Access** → **Applications** → **Add an application** → **Self-hosted**.
+2. Tambahkan tiga destinasi pada domain situs Anda: `/admin`, `/admin.html`, dan `/api/admin/*`. Jangan lindungi `/` atau `/api/photos`, karena itu galeri publik.
+3. Buat kebijakan **Allow** hanya untuk email Anda (misalnya *Emails* → alamat email Anda), dengan One-time PIN atau Google sebagai metode login.
+4. Uji di jendela privat: `/admin` harus meminta login, `/` dan `/api/photos` harus tetap terbuka.
+
+Catatan: Access bekerja pada hostname yang dikelola di Cloudflare. Jika situs hanya memakai `*.pages.dev`, aturan per path harus dibuat pada hostname tersebut; bila tidak berhasil, pakai custom domain. `ADMIN_TOKEN` tetap dipertahankan sebagai lapis kedua.
+
+## Open Graph dan favicon
+
+- `public/index.html` memuat tag `og:*` statis dan favicon (`public/favicon.svg`, `public/apple-touch-icon.png`).
+- `functions/index.ts` menyisipkan `og:image`, `og:url`, dan `canonical` secara otomatis dari foto pertama galeri, karena crawler WhatsApp/Instagram tidak menjalankan JavaScript.
+
+## Pratinjau lokal
+
+Foto placeholder (picsum) hanya dimuat di `localhost` (`src/dev-photos.ts`) dan dibuang dari build Cloudflare Pages. Di produksi, jika galeri kosong atau API gagal, pengunjung melihat pesan status, bukan foto palsu.
 
 ## Mengganti foto
 
-Untuk placeholder, ubah seed di `src/app.ts` atau isi data melalui migrasi D1. Untuk foto asli, upload dengan `/api/upload`, lalu gunakan nilai `src` yang dikembalikan endpoint tersebut pada record D1.
+Upload foto lewat halaman `/admin`. Untuk pratinjau lokal tanpa database, ubah `src/dev-photos.ts`.
 
 ## Struktur penting
 
@@ -93,9 +103,10 @@ Untuk placeholder, ubah seed di `src/app.ts` atau isi data melalui migrasi D1. U
 public/index.html          # shell HTML publik
 src/app.ts                 # TypeScript fetch, render, dan lightbox
 src/styles.css             # gaya album
-functions/api/photos.ts   # GET/POST foto
-functions/api/photos/[id].ts
-functions/api/upload.ts   # upload ke R2
+functions/api/photos.ts   # GET foto publik
+functions/api/photos/[id].ts   # GET satu foto published
+functions/api/admin/*      # semua endpoint tulis (dilindungi Access + token)
+functions/index.ts         # menyisipkan og:image ke halaman utama
 functions/api/media/[key].ts
 migrations/0001_create_photos.sql
 wrangler.toml
