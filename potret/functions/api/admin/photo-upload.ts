@@ -1,3 +1,5 @@
+import { isAuthorized, json } from "../../_lib/auth";
+
 type PhotoSize = "regular" | "wide" | "tall";
 
 type Env = {
@@ -7,17 +9,6 @@ type Env = {
 
 const MAX_BYTES = 1_300_000; // base64 ~1,73 MB, masih di bawah batas 2 MB per baris D1
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
-const json = (body: unknown, status = 200): Response => new Response(JSON.stringify(body), {
-  status,
-  headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
-});
-
-const isAuthorized = (request: Request, env: Env): boolean => {
-  const expected = env.ADMIN_TOKEN;
-  const received = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  return Boolean(expected && received && received === expected);
-};
 
 const toBase64 = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);
@@ -29,7 +20,7 @@ const toBase64 = (buffer: ArrayBuffer): string => {
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  if (!isAuthorized(request, env)) return json({ error: "Unauthorized" }, 401);
+  if (!(await isAuthorized(request, env.ADMIN_TOKEN))) return json({ error: "Unauthorized" }, 401);
   if (!env.DB) return json({ error: "D1 binding DB belum dikonfigurasi." }, 503);
 
   try {
@@ -64,7 +55,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     return json({ src, message: "Foto ditambahkan." }, 201);
   } catch (error) {
-    console.error("POST /api/photo-upload failed", error);
+    console.error("POST /api/admin/photo-upload failed", error);
     return json({ error: "Upload gagal. Pastikan migrasi 0002 dan 0003 sudah dijalankan di D1." }, 500);
   }
 };
