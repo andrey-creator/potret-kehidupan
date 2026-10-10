@@ -31,6 +31,7 @@ const fallbackPhotos: Photo[] = [
 ];
 
 const gallery = document.querySelector<HTMLElement>("#gallery");
+const featured = document.querySelector<HTMLElement>("#featured");
 const loading = document.querySelector<HTMLElement>("#galleryLoading");
 const galleryCount = document.querySelector<HTMLElement>("#galleryCount");
 const lightbox = document.querySelector<HTMLElement>("#lightbox");
@@ -50,18 +51,44 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character] ?? character);
 }
 
-function ratioStyle(item: Photo): string {
+function dimensions(item: Photo): { width: number; height: number } | null {
   const width = Number(item.width);
   const height = Number(item.height);
-  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) return "";
-  return ` width="${width}" height="${height}" style="aspect-ratio: ${width} / ${height}"`;
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) return null;
+  return { width, height };
+}
+
+function ratioStyle(item: Photo): string {
+  const size = dimensions(item);
+  return size ? ` width="${size.width}" height="${size.height}" style="aspect-ratio: ${size.width} / ${size.height}"` : "";
+}
+
+function renderFeatured(item: Photo): void {
+  if (!featured) return;
+  const size = dimensions(item);
+  const sizeAttributes = size ? ` width="${size.width}" height="${size.height}"` : "";
+  featured.innerHTML = `
+    <button class="featured-button" type="button" aria-label="Lihat foto unggulan: ${escapeHtml(item.caption)}" data-index="0">
+      <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt)}"${sizeAttributes} fetchpriority="high" decoding="async">
+    </button>
+    <figcaption class="featured-caption">
+      <p>${escapeHtml(item.caption)}</p>
+      <span>Pilihan</span>
+    </figcaption>
+  `;
+  featured.hidden = false;
 }
 
 function renderGallery(): void {
   if (!gallery || !galleryCount) return;
   galleryCount.textContent = String(photos.length);
   if (loading) loading.remove();
-  gallery.innerHTML = photos.map((item, index) => `
+  if (photos.length > 0) renderFeatured(photos[0]);
+  // Foto pertama tampil di header; galeri menampilkan sisanya (kecuali hanya ada satu foto).
+  const offset = photos.length > 1 ? 1 : 0;
+  gallery.innerHTML = photos.slice(offset).map((item, position) => {
+    const index = position + offset;
+    return `
     <article class="gallery-card is-${item.size}" data-index="${index}">
       <button class="photo-button" type="button" aria-label="Lihat foto: ${escapeHtml(item.caption)}" data-index="${index}">
         <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt)}"${ratioStyle(item)} loading="${index < 2 ? "eager" : "lazy"}" decoding="async">
@@ -72,7 +99,8 @@ function renderGallery(): void {
         <span class="photo-number">${padNumber(index + 1)} / ${padNumber(photos.length)}</span>
       </div>
     </article>
-  `).join("");
+  `;
+  }).join("");
 
   const cards = gallery.querySelectorAll<HTMLElement>(".gallery-card");
   const revealObserver = new IntersectionObserver((entries, observer) => {
@@ -123,6 +151,9 @@ async function loadPhotos(): Promise<void> {
   renderGallery();
 }
 
+featured?.addEventListener("click", (event) => {
+  if ((event.target as HTMLElement).closest(".featured-button")) showLightbox(0);
+});
 gallery?.addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".photo-button");
   if (button) showLightbox(Number(button.dataset.index));

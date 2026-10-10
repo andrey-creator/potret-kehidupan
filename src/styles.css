@@ -95,3 +95,26 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .001ms !important; }
 }
+
+/* Header: pengantar + foto unggulan */
+h1 { font-size: clamp(3.4rem, 8.2vw, 8rem); }
+.header-intro { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); align-items: end; gap: clamp(2rem, 5vw, 5rem); margin-top: clamp(3rem, 7vw, 6rem); }
+.intro-copy { min-width: 0; }
+.intro-copy .intro-note { max-width: 24rem; margin: clamp(1.8rem, 3vw, 2.6rem) 0 0; }
+.intro-lede { max-width: 28rem; margin: 1.1rem 0 0; font-size: clamp(.95rem, 1.25vw, 1.05rem); line-height: 1.6; }
+.intro-more { display: inline-block; margin-top: 1.6rem; padding-bottom: .25rem; border-bottom: 1px solid var(--sage); color: var(--ink); font-size: .67rem; letter-spacing: .15em; text-decoration: none; text-transform: uppercase; }
+.intro-more:hover, .intro-more:focus-visible { border-bottom-color: var(--ink); }
+.featured { width: fit-content; max-width: min(100%, 34rem); margin: 0 0 0 auto; }
+.featured[hidden] { display: none; }
+.featured-button { display: block; width: 100%; padding: 0; overflow: hidden; border: 0; background: var(--paper); cursor: zoom-in; }
+.featured-button img { display: block; width: auto; max-width: 100%; height: auto; max-height: min(78vh, 44rem); margin: 0 auto; transition: transform .8s var(--ease-out); }
+.featured-button:hover img, .featured-button:focus-visible img { transform: scale(1.02); }
+.featured-button:focus-visible { outline: 2px solid var(--sage); outline-offset: 4px; }
+.featured-caption { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding-top: .85rem; font-size: clamp(.88rem, 1.25vw, 1rem); line-height: 1.25; }
+.featured-caption p { margin: 0; }
+.featured-caption span { flex: 0 0 auto; color: var(--sage); font-size: .62rem; letter-spacing: .13em; text-transform: uppercase; }
+@media (max-width: 860px) {
+  .header-intro { grid-template-columns: 1fr; gap: 2.5rem; }
+  .featured { width: 100%; max-width: 100%; margin: 0; }
+  .featured-button img { max-height: 80vh; }
+}

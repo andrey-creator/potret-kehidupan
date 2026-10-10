@@ -69,7 +69,7 @@
     .tile .meta { padding: 8px; font-size: .8rem; }
     .tile .meta strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tile .meta span { color: var(--muted); }
-    .tile button { width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 8px; font-size: .85rem; }
+    .tile button { display: block; width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 8px; font-size: .85rem; }
     [hidden] { display: none !important; }
   </style>
 </head>
@@ -107,6 +107,7 @@
 
     <section>
       <h2>Foto di galeri <span id="count" class="status"></span></h2>
+      <p class="sub" style="margin:0 0 12px;font-size:.85rem">Foto pertama (★) tampil sebagai foto unggulan di header situs.</p>
       <div id="gallery" class="grid"></div>
       <p id="galleryMsg" class="msg" role="status"></p>
     </section>
@@ -174,7 +175,8 @@
       if (!res.ok) throw new Error("HTTP " + res.status);
       var photos = await res.json();
       box.textContent = "";
-      photos.forEach(function (p) {
+      var firstSort = photos.length ? photos[0].sort_order : 0;
+      photos.forEach(function (p, i) {
         var tile = document.createElement("div");
         tile.className = "tile";
 
@@ -188,7 +190,7 @@
         var cap = document.createElement("strong");
         cap.textContent = p.caption;
         var info = document.createElement("span");
-        info.textContent = "ID " + p.id + " · " + p.size;
+        info.textContent = (i === 0 ? "★ Unggulan · " : "") + "ID " + p.id + " · " + p.size;
         meta.appendChild(cap);
         meta.appendChild(info);
 
@@ -200,6 +202,13 @@
 
         tile.appendChild(img);
         tile.appendChild(meta);
+        if (i > 0) {
+          var feature = document.createElement("button");
+          feature.type = "button";
+          feature.textContent = "Jadikan unggulan";
+          feature.addEventListener("click", function () { makeFeatured(p, firstSort, feature); });
+          tile.appendChild(feature);
+        }
         tile.appendChild(del);
         box.appendChild(tile);
       });
@@ -207,6 +216,24 @@
       say($("galleryMsg"), photos.length ? "" : "Belum ada foto.");
     } catch (e) {
       say($("galleryMsg"), "Gagal memuat galeri. Cek /api/photos.", "err");
+    }
+  }
+
+  async function makeFeatured(p, firstSort, btn) {
+    btn.disabled = true;
+    try {
+      var headers = authHeaders();
+      headers["Content-Type"] = "application/json";
+      var res = await fetch("/api/photos/" + p.id, {
+        method: "PUT",
+        headers: headers,
+        body: JSON.stringify({ src: p.src, alt: p.alt, caption: p.caption, size: p.size, sort_order: firstSort - 1, is_published: true })
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      loadGallery();
+    } catch (e) {
+      btn.disabled = false;
+      say($("galleryMsg"), "Gagal menjadikan unggulan (kode: " + e.message + ").", "err");
     }
   }
 
