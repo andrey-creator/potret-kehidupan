@@ -7,6 +7,8 @@ type Photo = {
   caption: string;
   size: PhotoSize;
   sort_order?: number;
+  width?: number | null;
+  height?: number | null;
 };
 
 const fallbackPhotos: Photo[] = [
@@ -48,6 +50,13 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character] ?? character);
 }
 
+function ratioStyle(item: Photo): string {
+  const width = Number(item.width);
+  const height = Number(item.height);
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) return "";
+  return ` width="${width}" height="${height}" style="aspect-ratio: ${width} / ${height}"`;
+}
+
 function renderGallery(): void {
   if (!gallery || !galleryCount) return;
   galleryCount.textContent = String(photos.length);
@@ -55,7 +64,7 @@ function renderGallery(): void {
   gallery.innerHTML = photos.map((item, index) => `
     <article class="gallery-card is-${item.size}" data-index="${index}">
       <button class="photo-button" type="button" aria-label="Lihat foto: ${escapeHtml(item.caption)}" data-index="${index}">
-        <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt)}" loading="${index < 2 ? "eager" : "lazy"}" decoding="async">
+        <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt)}"${ratioStyle(item)} loading="${index < 2 ? "eager" : "lazy"}" decoding="async">
         <span class="photo-hint">Klik untuk melihat</span>
       </button>
       <div class="photo-caption">

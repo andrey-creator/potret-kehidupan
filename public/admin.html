@@ -57,7 +57,7 @@
       padding: 12px 0; border-top: 1px solid var(--line);
     }
     .item:first-child { border-top: 0; }
-    .item img { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; background: var(--line); }
+    .item img { width: 96px; height: 96px; object-fit: contain; border-radius: 8px; background: var(--line); }
     .fields { display: grid; gap: 8px; grid-template-columns: 1fr 120px; }
     .fields .full { grid-column: 1 / -1; }
     .status { font-size: .85rem; color: var(--muted); }
@@ -65,7 +65,7 @@
     .status.ok { color: var(--ok); }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
     .tile { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
-    .tile img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--line); }
+    .tile img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--line); }
     .tile .meta { padding: 8px; font-size: .8rem; }
     .tile .meta strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tile .meta span { color: var(--muted); }
@@ -259,7 +259,7 @@
     }
     URL.revokeObjectURL(loaded.url);
     if (!blob || blob.size > MAX_BYTES) throw new Error("Foto masih terlalu besar setelah dikecilkan");
-    return { blob: blob, width: w, height: h };
+    return { blob: blob, width: canvas.width, height: canvas.height };
   }
 
   function autoSize(w, h) {
@@ -382,6 +382,8 @@
         form.append("file", shrunk.blob, "foto.jpg");
         form.append("caption", item.caption.trim());
         form.append("alt", item.alt.trim());
+        form.append("width", String(shrunk.width));
+        form.append("height", String(shrunk.height));
         form.append("size", item.size === "auto" ? autoSize(shrunk.width, shrunk.height) : item.size);
         setStatus("Mengunggah (" + Math.round(shrunk.blob.size / 1024) + " KB)…");
         var res = await fetch("/api/photo-upload", { method: "POST", headers: authHeaders(), body: form });

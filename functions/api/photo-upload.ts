@@ -39,6 +39,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const alt = String(form.get("alt") ?? "").trim() || caption;
     const sizeValue = String(form.get("size") ?? "regular");
     const size: PhotoSize = sizeValue === "wide" || sizeValue === "tall" ? sizeValue : "regular";
+    const toDimension = (value: FormDataEntryValue | null): number | null => {
+      const n = Number(value);
+      return Number.isInteger(n) && n > 0 && n <= 20000 ? n : null;
+    };
+    const width = toDimension(form.get("width"));
+    const height = toDimension(form.get("height"));
 
     if (!(file instanceof File) || file.size === 0) return json({ error: "File foto wajib diisi." }, 400);
     if (!ALLOWED_TYPES.includes(file.type)) return json({ error: "Format harus JPEG, PNG, atau WebP." }, 400);
@@ -52,13 +58,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     await env.DB.batch([
       env.DB.prepare("INSERT INTO photo_files (id, mime, data, size_bytes) VALUES (?, ?, ?, ?)").bind(id, file.type, data, file.size),
       env.DB.prepare(
-        "INSERT INTO photos (src, alt, caption, size, sort_order) VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM photos))"
-      ).bind(src, alt, caption, size)
+        "INSERT INTO photos (src, alt, caption, size, sort_order, width, height) VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM photos), ?, ?)"
+      ).bind(src, alt, caption, size, width, height)
     ]);
 
     return json({ src, message: "Foto ditambahkan." }, 201);
   } catch (error) {
     console.error("POST /api/photo-upload failed", error);
-    return json({ error: "Upload gagal. Pastikan migrasi 0002 sudah dijalankan di D1." }, 500);
+    return json({ error: "Upload gagal. Pastikan migrasi 0002 dan 0003 sudah dijalankan di D1." }, 500);
   }
 };

@@ -30,10 +30,18 @@ const isPhotoSize = (value: unknown): value is PhotoSize => value === "regular" 
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   if (!env.DB) return json({ error: "D1 binding DB belum dikonfigurasi." }, 503);
   try {
-    const { results } = await env.DB.prepare(
-      "SELECT id, src, alt, caption, size, sort_order FROM photos WHERE is_published = 1 ORDER BY sort_order ASC, id ASC"
-    ).all();
-    return json(results);
+    try {
+      const { results } = await env.DB.prepare(
+        "SELECT id, src, alt, caption, size, sort_order, width, height FROM photos WHERE is_published = 1 ORDER BY sort_order ASC, id ASC"
+      ).all();
+      return json(results);
+    } catch {
+      // Kolom width/height belum ada (migrasi 0003 belum dijalankan): tetap tampilkan galeri.
+      const { results } = await env.DB.prepare(
+        "SELECT id, src, alt, caption, size, sort_order FROM photos WHERE is_published = 1 ORDER BY sort_order ASC, id ASC"
+      ).all();
+      return json(results);
+    }
   } catch (error) {
     console.error("GET /api/photos failed", error);
     return json({ error: "Gagal membaca galeri." }, 500);
