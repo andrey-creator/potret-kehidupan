@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin — Potret Kehidupan</title>
+  <style>
+    :root {
+      --bg: #f1eee8; --card: #ffffff; --text: #1f1d1a; --muted: #6b665e;
+      --line: #ded9cf; --accent: #2f4f3e; --accent-text: #ffffff; --danger: #a63a2b;
+      --ok: #2f6b45;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171614; --card: #211f1c; --text: #f0ece4; --muted: #a39d92;
+        --line: #38352f; --accent: #8fbfa3; --accent-text: #11140f; --danger: #e58a7a;
+        --ok: #8fd1a5;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 1.5rem; margin: 0 0 4px; }
+    h2 { font-size: 1.1rem; margin: 0 0 12px; }
+    p.sub { margin: 0 0 24px; color: var(--muted); }
+    section {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 12px; padding: 16px; margin-bottom: 20px;
+    }
+    label { display: block; font-size: .875rem; color: var(--muted); margin-bottom: 4px; }
+    input[type=text], input[type=password], select {
+      width: 100%; padding: 10px 12px; font: inherit; color: var(--text);
+      background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    }
+    input[type=file] { width: 100%; font: inherit; color: var(--text); }
+    button {
+      font: inherit; cursor: pointer; padding: 10px 16px; border-radius: 8px;
+      border: 1px solid var(--line); background: var(--card); color: var(--text);
+    }
+    button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+    button.danger { color: var(--danger); }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+    .row > * { flex: 1 1 200px; }
+    .row > button { flex: 0 0 auto; }
+    .check { display: flex; align-items: center; gap: 8px; margin-top: 10px; color: var(--muted); font-size: .875rem; }
+    .check input { width: auto; }
+    .msg { margin: 10px 0 0; font-size: .9rem; min-height: 1.2em; }
+    .msg.err { color: var(--danger); }
+    .msg.ok { color: var(--ok); }
+    .item {
+      display: grid; grid-template-columns: 96px 1fr; gap: 12px;
+      padding: 12px 0; border-top: 1px solid var(--line);
+    }
+    .item:first-child { border-top: 0; }
+    .item img { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; background: var(--line); }
+    .fields { display: grid; gap: 8px; grid-template-columns: 1fr 120px; }
+    .fields .full { grid-column: 1 / -1; }
+    .status { font-size: .85rem; color: var(--muted); }
+    .status.err { color: var(--danger); }
+    .status.ok { color: var(--ok); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .tile { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
+    .tile img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--line); }
+    .tile .meta { padding: 8px; font-size: .8rem; }
+    .tile .meta strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tile .meta span { color: var(--muted); }
+    .tile button { width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 8px; font-size: .85rem; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Admin Potret Kehidupan</h1>
+  <p class="sub">Tambah dan hapus foto galeri.</p>
+
+  <section id="login">
+    <h2>Masuk</h2>
+    <div class="row">
+      <div>
+        <label for="token">Token admin (ADMIN_TOKEN)</label>
+        <input id="token" type="password" autocomplete="off" placeholder="Tempel token di sini">
+      </div>
+      <button id="loginBtn" class="primary" type="button">Masuk</button>
+    </div>
+    <label class="check"><input id="remember" type="checkbox"> Ingat token di browser ini (jangan dicentang di komputer umum)</label>
+    <p id="loginMsg" class="msg" role="status"></p>
+  </section>
+
+  <div id="panel" hidden>
+    <section>
+      <h2>Upload foto</h2>
+      <label for="files">Pilih satu atau beberapa foto (JPEG, PNG, WebP)</label>
+      <input id="files" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+      <p class="sub" style="margin:8px 0 0;font-size:.85rem">Foto otomatis dikecilkan di browser (sisi terpanjang 1600 px) sebelum diunggah.</p>
+      <div id="queue"></div>
+      <div class="row" style="margin-top:12px">
+        <button id="uploadBtn" class="primary" type="button" disabled>Upload semua</button>
+        <button id="logoutBtn" type="button">Keluar</button>
+      </div>
+      <p id="uploadMsg" class="msg" role="status"></p>
+    </section>
+
+    <section>
+      <h2>Foto di galeri <span id="count" class="status"></span></h2>
+      <div id="gallery" class="grid"></div>
+      <p id="galleryMsg" class="msg" role="status"></p>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var MAX_SIDE = 1600;
+  var MAX_BYTES = 1200000;
+  var STORE_KEY = "potret-admin-token";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var token = "";
+  var queue = [];
+
+  function safeGet() { try { return localStorage.getItem(STORE_KEY) || ""; } catch (e) { return ""; } }
+  function safeSet(v) { try { localStorage.setItem(STORE_KEY, v); } catch (e) {} }
+  function safeDel() { try { localStorage.removeItem(STORE_KEY); } catch (e) {} }
+
+  function say(el, text, kind) {
+    el.textContent = text || "";
+    el.className = "msg" + (kind ? " " + kind : "");
+  }
+
+  function authHeaders() { return { Authorization: "Bearer " + token }; }
+
+  async function login(candidate, remember) {
+    say($("loginMsg"), "Memeriksa token…");
+    try {
+      var res = await fetch("/api/auth-check", { method: "POST", headers: { Authorization: "Bearer " + candidate } });
+      if (!res.ok) {
+        say($("loginMsg"), "Token salah, atau secret ADMIN_TOKEN belum aktif di Cloudflare.", "err");
+        return false;
+      }
+    } catch (e) {
+      say($("loginMsg"), "Tidak bisa terhubung ke server.", "err");
+      return false;
+    }
+    token = candidate;
+    if (remember) safeSet(candidate); else safeDel();
+    $("login").hidden = true;
+    $("panel").hidden = false;
+    loadGallery();
+    return true;
+  }
+
+  function logout() {
+    token = "";
+    safeDel();
+    $("token").value = "";
+    $("panel").hidden = true;
+    $("login").hidden = false;
+    say($("loginMsg"), "");
+  }
+
+  // ---------- Gallery ----------
+  async function loadGallery() {
+    var box = $("gallery");
+    say($("galleryMsg"), "Memuat…");
+    try {
+      var res = await fetch("/api/photos?_=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      var photos = await res.json();
+      box.textContent = "";
+      photos.forEach(function (p) {
+        var tile = document.createElement("div");
+        tile.className = "tile";
+
+        var img = document.createElement("img");
+        img.src = p.src;
+        img.alt = p.alt;
+        img.loading = "lazy";
+
+        var meta = document.createElement("div");
+        meta.className = "meta";
+        var cap = document.createElement("strong");
+        cap.textContent = p.caption;
+        var info = document.createElement("span");
+        info.textContent = "ID " + p.id + " · " + p.size;
+        meta.appendChild(cap);
+        meta.appendChild(info);
+
+        var del = document.createElement("button");
+        del.type = "button";
+        del.className = "danger";
+        del.textContent = "Hapus";
+        del.addEventListener("click", function () { removePhoto(p, del); });
+
+        tile.appendChild(img);
+        tile.appendChild(meta);
+        tile.appendChild(del);
+        box.appendChild(tile);
+      });
+      $("count").textContent = "(" + photos.length + ")";
+      say($("galleryMsg"), photos.length ? "" : "Belum ada foto.");
+    } catch (e) {
+      say($("galleryMsg"), "Gagal memuat galeri. Cek /api/photos.", "err");
+    }
+  }
+
+  async function removePhoto(p, btn) {
+    if (!confirm('Hapus foto "' + p.caption + '"? Ini tidak bisa dibatalkan.')) return;
+    btn.disabled = true;
+    try {
+      var res = await fetch("/api/photos/" + p.id, { method: "DELETE", headers: authHeaders() });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      loadGallery();
+    } catch (e) {
+      btn.disabled = false;
+      say($("galleryMsg"), "Gagal menghapus (kode: " + e.message + ").", "err");
+    }
+  }
+
+  // ---------- Image processing ----------
+  function loadImage(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () { resolve({ img: img, url: url }); };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("Gambar tidak bisa dibaca")); };
+      img.src = url;
+    });
+  }
+
+  function canvasToBlob(canvas, quality) {
+    return new Promise(function (resolve) { canvas.toBlob(resolve, "image/jpeg", quality); });
+  }
+
+  async function shrink(file) {
+    var loaded = await loadImage(file);
+    var img = loaded.img;
+    var w = img.naturalWidth, h = img.naturalHeight;
+    var side = MAX_SIDE;
+    var blob = null;
+    for (var attempt = 0; attempt < 4; attempt++) {
+      var scale = Math.min(1, side / Math.max(w, h));
+      var canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(w * scale));
+      canvas.height = Math.max(1, Math.round(h * scale));
+      var ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      blob = await canvasToBlob(canvas, 0.82 - attempt * 0.07);
+      if (blob && blob.size <= MAX_BYTES) break;
+      side = Math.round(side * 0.8);
+    }
+    URL.revokeObjectURL(loaded.url);
+    if (!blob || blob.size > MAX_BYTES) throw new Error("Foto masih terlalu besar setelah dikecilkan");
+    return { blob: blob, width: w, height: h };
+  }
+
+  function autoSize(w, h) {
+    var ratio = w / h;
+    if (ratio >= 1.3) return "wide";
+    if (ratio <= 0.85) return "tall";
+    return "regular";
+  }
+
+  // ---------- Queue ----------
+  function renderQueue() {
+    var box = $("queue");
+    box.textContent = "";
+    queue.forEach(function (item) {
+      var row = document.createElement("div");
+      row.className = "item";
+
+      var thumb = document.createElement("img");
+      thumb.src = item.preview;
+      thumb.alt = "";
+
+      var right = document.createElement("div");
+      var fields = document.createElement("div");
+      fields.className = "fields";
+
+      var capWrap = document.createElement("div");
+      var capLabel = document.createElement("label");
+      capLabel.textContent = "Caption (wajib, maks. 120 karakter)";
+      var cap = document.createElement("input");
+      cap.type = "text";
+      cap.maxLength = 120;
+      cap.value = item.caption;
+      cap.addEventListener("input", function () { item.caption = cap.value; });
+      capWrap.appendChild(capLabel);
+      capWrap.appendChild(cap);
+
+      var sizeWrap = document.createElement("div");
+      var sizeLabel = document.createElement("label");
+      sizeLabel.textContent = "Ukuran";
+      var size = document.createElement("select");
+      [["auto", "Otomatis"], ["regular", "Regular"], ["wide", "Lebar"], ["tall", "Tinggi"]].forEach(function (o) {
+        var opt = document.createElement("option");
+        opt.value = o[0];
+        opt.textContent = o[1];
+        if (o[0] === item.size) opt.selected = true;
+        size.appendChild(opt);
+      });
+      size.addEventListener("change", function () { item.size = size.value; });
+      sizeWrap.appendChild(sizeLabel);
+      sizeWrap.appendChild(size);
+
+      var altWrap = document.createElement("div");
+      altWrap.className = "full";
+      var altLabel = document.createElement("label");
+      altLabel.textContent = "Deskripsi foto / alt (opsional, default sama dengan caption)";
+      var alt = document.createElement("input");
+      alt.type = "text";
+      alt.value = item.alt;
+      alt.addEventListener("input", function () { item.alt = alt.value; });
+      altWrap.appendChild(altLabel);
+      altWrap.appendChild(alt);
+
+      fields.appendChild(capWrap);
+      fields.appendChild(sizeWrap);
+      fields.appendChild(altWrap);
+
+      var status = document.createElement("div");
+      status.className = "status";
+      status.textContent = item.file.name;
+      item.statusEl = status;
+
+      var remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "Batal";
+      remove.style.marginTop = "6px";
+      remove.addEventListener("click", function () {
+        URL.revokeObjectURL(item.preview);
+        queue = queue.filter(function (q) { return q !== item; });
+        renderQueue();
+      });
+
+      right.appendChild(fields);
+      right.appendChild(status);
+      right.appendChild(remove);
+      row.appendChild(thumb);
+      row.appendChild(right);
+      box.appendChild(row);
+    });
+    $("uploadBtn").disabled = queue.length === 0;
+  }
+
+  function addFiles(fileList) {
+    Array.prototype.forEach.call(fileList, function (file) {
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return;
+      queue.push({ file: file, preview: URL.createObjectURL(file), caption: "", alt: "", size: "auto", statusEl: null });
+    });
+    $("files").value = "";
+    renderQueue();
+  }
+
+  async function uploadAll() {
+    var btn = $("uploadBtn");
+    var pending = queue.slice();
+    if (!pending.length) return;
+    btn.disabled = true;
+    var ok = 0, failed = 0;
+
+    for (var i = 0; i < pending.length; i++) {
+      var item = pending[i];
+      var setStatus = function (text, kind) { item.statusEl.textContent = text; item.statusEl.className = "status" + (kind ? " " + kind : ""); };
+      if (!item.caption.trim()) {
+        setStatus("Isi caption dulu.", "err");
+        failed++;
+        continue;
+      }
+      try {
+        setStatus("Mengecilkan foto…");
+        var shrunk = await shrink(item.file);
+        var form = new FormData();
+        form.append("file", shrunk.blob, "foto.jpg");
+        form.append("caption", item.caption.trim());
+        form.append("alt", item.alt.trim());
+        form.append("size", item.size === "auto" ? autoSize(shrunk.width, shrunk.height) : item.size);
+        setStatus("Mengunggah (" + Math.round(shrunk.blob.size / 1024) + " KB)…");
+        var res = await fetch("/api/photo-upload", { method: "POST", headers: authHeaders(), body: form });
+        if (!res.ok) {
+          var detail = "";
+          try { detail = (await res.json()).error || ""; } catch (e) {}
+          throw new Error(detail || "HTTP " + res.status);
+        }
+        setStatus("Berhasil diunggah.", "ok");
+        item.done = true;
+        ok++;
+      } catch (e) {
+        setStatus("Gagal: " + e.message, "err");
+        failed++;
+      }
+    }
+
+    queue.forEach(function (q) { if (q.done) URL.revokeObjectURL(q.preview); });
+    say($("uploadMsg"), ok + " foto berhasil" + (failed ? ", " + failed + " gagal (lihat keterangan di tiap foto)." : "."), failed ? "err" : "ok");
+    if (ok) loadGallery();
+    // Foto yang sukses disembunyikan setelah jeda singkat agar status terbaca.
+    setTimeout(function () { queue = queue.filter(function (q) { return !q.done; }); renderQueue(); }, 1200);
+  }
+
+  // ---------- Wire up ----------
+  $("loginBtn").addEventListener("click", function () {
+    var value = $("token").value.trim();
+    if (!value) { say($("loginMsg"), "Masukkan token dulu.", "err"); return; }
+    login(value, $("remember").checked);
+  });
+  $("token").addEventListener("keydown", function (e) { if (e.key === "Enter") $("loginBtn").click(); });
+  $("files").addEventListener("change", function (e) { addFiles(e.target.files); });
+  $("uploadBtn").addEventListener("click", uploadAll);
+  $("logoutBtn").addEventListener("click", logout);
+
+  var saved = safeGet();
+  if (saved) {
+    $("remember").checked = true;
+    login(saved, true);
+  }
+})();
+</script>
+</body>
+</html>

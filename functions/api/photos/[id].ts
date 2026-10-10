@@ -64,6 +64,12 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
   if (!id) return json({ error: "ID foto tidak valid." }, 400);
   if (!isAuthorized(request, env)) return json({ error: "Unauthorized" }, 401);
   if (!env.DB) return json({ error: "D1 binding DB belum dikonfigurasi." }, 503);
-  const result = await env.DB.prepare("DELETE FROM photos WHERE id = ?").bind(id).run();
-  return result.meta.changes ? json({ message: "Foto dihapus." }) : json({ error: "Foto tidak ditemukan." }, 404);
+  const row = await env.DB.prepare("SELECT src FROM photos WHERE id = ?").bind(id).first<{ src: string }>();
+  if (!row) return json({ error: "Foto tidak ditemukan." }, 404);
+
+  const statements = [env.DB.prepare("DELETE FROM photos WHERE id = ?").bind(id)];
+  const match = /^\/api\/img\/([0-9a-f-]{36})$/.exec(row.src);
+  if (match) statements.push(env.DB.prepare("DELETE FROM photo_files WHERE id = ?").bind(match[1]));
+  await env.DB.batch(statements);
+  return json({ message: "Foto dihapus." });
 };
