@@ -1,6 +1,7 @@
 # TODO — Potret Kehidupan
 
 ## Sebelum dibagikan
+- [ ] Jalankan `npm install` (memasang `bootstrap-icons`), lalu commit `package.json` dan `package-lock.json` yang berubah. Tanpa ini build Cloudflare Pages gagal.
 - [ ] Jalankan migrasi `0004` dan `0005` di Console D1, lalu klik **Buat thumbnail foto lama** di `/admin`.
 - [ ] Hapus semua foto placeholder dari `/admin` dan unggah foto asli.
 - [ ] Pilih foto unggulan (★) yang bagus untuk header dan pratinjau link.

@@ -5,7 +5,7 @@ Website galeri foto personal di Cloudflare Pages. Frontend statis (HTML + CSS + 
 ## Teknologi
 
 - **Frontend:** HTML, CSS custom, dan TypeScript (dikompilasi ke `dist/assets/app.js`). Dua bahasa: Indonesia (`/`) dan Inggris (`/en/`).
-- **Bootstrap 5.3.3:** dipasang lewat npm dan disalin ke `dist/assets/vendor/` saat build (tanpa CDN). Dipakai penuh di halaman admin; halaman publik memakai CSS Bootstrap sebagai dasar dan tampilan khusus di `styles.css`.
+- **Bootstrap 5.3.3 + Bootstrap Icons 1.11.3:** dipasang lewat npm dan disalin ke `dist/assets/vendor/` saat build (tanpa CDN). Dipakai penuh di halaman admin. Di halaman publik (`/`, `/en/`, `/foto/:id`): navbar responsif dan sticky (`.navbar`, `.sticky-top`), kartu galeri (`.card`), lightbox (`.modal`, kode di `src/app.ts`), tombol (`.btn`), ikon (`bi bi-*`), dan kelas utilitas (spasi, flex, tipografi). Warna dan huruf Bootstrap dijembatani ke palet album lewat variabel `--bs-*` di bagian atas `src/styles.css`.
 - **API:** Cloudflare Pages Functions (`functions/`).
 - **Database + foto:** Cloudflare D1 (tabel `photos` dan `photo_files`).
 - **Source control:** GitHub. Cloudflare Pages membangun otomatis setiap push ke `main`.

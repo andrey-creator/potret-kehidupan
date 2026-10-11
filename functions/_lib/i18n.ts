@@ -9,6 +9,9 @@ type Strings = {
   homeTitle: string;
   homeDescription: string;
   galleryLink: string;
+  navMain: string;
+  navGallery: string;
+  toggleMenu: string;
   back: string;
   share: string;
   copied: string;
@@ -27,7 +30,10 @@ export const STRINGS: Record<Lang, Strings> = {
     homeTitle: "Potret Kehidupan — Kepingan hidup dalam gambar.",
     homeDescription: "Potret Kehidupan — kepingan hidup dalam gambar.",
     galleryLink: "/#gallery",
-    back: "← Galeri",
+    navMain: "Navigasi utama",
+    navGallery: "Galeri",
+    toggleMenu: "Buka atau tutup menu",
+    back: "Galeri",
     share: "Bagikan",
     copied: "Tautan disalin.",
     copyManually: "Salin dari kolom alamat browser.",
@@ -43,7 +49,10 @@ export const STRINGS: Record<Lang, Strings> = {
     homeTitle: "Potret Kehidupan — Fragments of life, in pictures.",
     homeDescription: "Potret Kehidupan — fragments of life, in pictures.",
     galleryLink: "/en/#gallery",
-    back: "← Gallery",
+    navMain: "Main navigation",
+    navGallery: "Gallery",
+    toggleMenu: "Toggle menu",
+    back: "Gallery",
     share: "Share",
     copied: "Link copied.",
     copyManually: "Copy it from the browser address bar.",

@@ -129,13 +129,13 @@ function renderGallery(): void {
   gallery.innerHTML = photos.slice(offset).map((item, position) => {
     const index = position + offset;
     return `
-    <article class="gallery-card is-${item.size}" data-index="${index}">
+    <article class="gallery-card card border-0 rounded-0 bg-transparent is-${item.size}" data-index="${index}">
       <button class="photo-button" type="button" aria-label="${escapeHtml(TEXT.viewPhoto(captionOf(item)))}" data-index="${index}">
         <img src="${escapeHtml(thumbSrc(item.src))}" alt="${escapeHtml(altOf(item))}"${ratioStyle(item)} loading="${index < 2 ? "eager" : "lazy"}" decoding="async">
-        <span class="photo-hint">${escapeHtml(TEXT.hint)}</span>
+        <span class="photo-hint"><i class="bi bi-zoom-in me-1" aria-hidden="true"></i>${escapeHtml(TEXT.hint)}</span>
       </button>
-      <div class="photo-caption">
-        <p>${escapeHtml(captionOf(item))}</p>
+      <div class="card-body photo-caption d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-baseline gap-1 gap-sm-3 px-0 pb-0 pt-3">
+        <p class="card-text mb-0">${escapeHtml(captionOf(item))}</p>
         <span class="photo-number">${padNumber(index + 1)} / ${padNumber(photos.length)}</span>
       </div>
     </article>
@@ -156,7 +156,12 @@ function renderGallery(): void {
   });
 }
 
-// ---------- Lightbox ----------
+// ---------- Lightbox (Bootstrap Modal) ----------
+// Modal Bootstrap sudah mengurus: backdrop, tombol Esc, jebakan fokus (Tab), kunci scroll, dan animasi.
+// Kode di sini hanya mengisi isi foto, navigasi kiri/kanan, geser jari, dan tombol bagikan.
+
+const lightboxModal = lightbox ? bootstrap.Modal.getOrCreateInstance(lightbox) : null;
+const isLightboxOpen = (): boolean => lightbox?.classList.contains("show") ?? false;
 
 /** Memuat foto sebelum dan sesudah foto aktif agar perpindahan terasa instan. */
 function preloadNeighbors(index: number): void {
@@ -176,9 +181,9 @@ function setStatus(text: string): void {
 }
 
 function showLightbox(index: number, trigger?: HTMLElement | null): void {
-  if (!lightbox || !lightboxImage || !lightboxCaption || !lightboxCount || !lightboxClose || photos.length === 0) return;
-  const wasHidden = lightbox.hidden;
-  if (wasHidden) opener = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+  if (!lightboxModal || !lightboxImage || !lightboxCaption || !lightboxCount || photos.length === 0) return;
+  const wasClosed = !isLightboxOpen();
+  if (wasClosed) opener = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
   activeIndex = (index + photos.length) % photos.length;
   const item = photos[activeIndex];
   lightboxImage.src = item.src;
@@ -195,9 +200,7 @@ function showLightbox(index: number, trigger?: HTMLElement | null): void {
   }
   if (lightboxShare) lightboxShare.hidden = !item.id;
   setStatus("");
-  lightbox.hidden = false;
-  document.body.classList.add("is-locked");
-  if (wasHidden) lightboxClose.focus();
+  if (wasClosed) lightboxModal.show(trigger ?? undefined);
   preloadNeighbors(activeIndex);
 }
 
@@ -209,14 +212,6 @@ function restoreFocus(): void {
   const target = current ?? opener;
   if (target && target.isConnected) target.focus();
   opener = null;
-}
-
-function closeLightbox(): void {
-  if (!lightbox || !lightboxImage || lightbox.hidden) return;
-  lightbox.hidden = true;
-  lightboxImage.src = "";
-  document.body.classList.remove("is-locked");
-  restoreFocus();
 }
 
 function moveLightbox(step: number): void { showLightbox(activeIndex + step); }
@@ -238,23 +233,6 @@ async function shareCurrent(): Promise<void> {
   } catch (error) {
     // Pengguna membatalkan dialog bagikan: bukan kesalahan. Kegagalan menyalin diberi petunjuk manual.
     if ((error as DOMException)?.name !== "AbortError") setStatus(TEXT.copyManually);
-  }
-}
-
-/** Menjaga Tab tetap berputar di dalam lightbox. */
-function trapFocus(event: KeyboardEvent): void {
-  if (!lightbox) return;
-  const focusable = Array.from(lightbox.querySelectorAll<HTMLElement>("button, a[href]")).filter((el) => !el.hidden && !(el as HTMLButtonElement).disabled);
-  if (focusable.length === 0) return;
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  const active = document.activeElement;
-  if (event.shiftKey && (active === first || !lightbox.contains(active))) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && (active === last || !lightbox.contains(active))) {
-    event.preventDefault();
-    first.focus();
   }
 }
 
@@ -318,19 +296,23 @@ gallery?.addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".photo-button");
   if (button) showLightbox(Number(button.dataset.index), button);
 });
-lightboxClose?.addEventListener("click", closeLightbox);
 lightboxPrevious?.addEventListener("click", () => moveLightbox(-1));
 lightboxNext?.addEventListener("click", () => moveLightbox(1));
 lightboxShare?.addEventListener("click", () => { void shareCurrent(); });
+// Klik area gelap di sekitar foto menutup modal (tombol X dan Esc ditangani Bootstrap).
 lightbox?.addEventListener("click", (event) => {
-  if (event.target === lightbox || event.target === lightboxBackdrop) closeLightbox();
+  const target = event.target as HTMLElement;
+  if (target === lightboxBackdrop || target.matches(".modal, .modal-dialog, .modal-content, .lightbox-body")) lightboxModal?.hide();
+});
+lightbox?.addEventListener("shown.bs.modal", () => lightboxClose?.focus());
+lightbox?.addEventListener("hidden.bs.modal", () => {
+  lightboxImage?.removeAttribute("src");
+  restoreFocus();
 });
 document.addEventListener("keydown", (event) => {
-  if (lightbox?.hidden) return;
-  if (event.key === "Escape") closeLightbox();
+  if (!isLightboxOpen()) return;
   if (event.key === "ArrowLeft") moveLightbox(-1);
   if (event.key === "ArrowRight") moveLightbox(1);
-  if (event.key === "Tab") trapFocus(event);
 });
 
 const year = String(new Date().getFullYear());

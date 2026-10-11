@@ -1,4 +1,4 @@
-import { alternateLinks, formatDate, Lang, pick, photoPath, STRINGS } from "./i18n";
+import { alternateLinks, formatDate, homePath, Lang, pick, photoPath, STRINGS } from "./i18n";
 import { DETAIL_COLUMN_SETS, queryWithFallback } from "./photos";
 
 type Env = {
@@ -32,6 +32,32 @@ const escapeHtml = (value: string): string => value
   .replaceAll("'", "&#39;");
 
 const pad = (value: number): string => String(value).padStart(2, "0");
+
+/** Navbar sticky yang sama dengan halaman utama; pilihan bahasa menunjuk ke versi halaman foto ini. */
+const siteNav = (lang: Lang, photoId: number): string => {
+  const t = STRINGS[lang];
+  return `<nav class="navbar navbar-expand-md sticky-top site-nav" aria-label="${escapeHtml(t.navMain)}">
+    <div class="container-fluid shell">
+      <a class="navbar-brand site-brand" href="${homePath(lang)}">Potret Kehidupan</a>
+      <button class="navbar-toggler border-0 shadow-none px-0" type="button" data-bs-toggle="collapse" data-bs-target="#siteMenu" aria-controls="siteMenu" aria-expanded="false" aria-label="${escapeHtml(t.toggleMenu)}">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="siteMenu">
+        <ul class="navbar-nav ms-md-auto align-items-md-center gap-md-4 pt-3 pt-md-0">
+          <li class="nav-item"><a class="nav-link px-0" href="${t.galleryLink}"><i class="bi bi-images me-1" aria-hidden="true"></i>${escapeHtml(t.navGallery)}</a></li>
+          <li class="nav-item"><a class="nav-link px-0" href="https://www.instagram.com/andreyson_hamilton_a" target="_blank" rel="noreferrer"><i class="bi bi-instagram me-1" aria-hidden="true"></i>Instagram</a></li>
+          <li class="nav-item"><a class="nav-link px-0" href="https://youtube.com/@aryasatyakeandre" target="_blank" rel="noreferrer"><i class="bi bi-youtube me-1" aria-hidden="true"></i>YouTube</a></li>
+          <li class="nav-item">
+            <div class="lang-switch" role="group" aria-label="Bahasa / Language">
+              <a href="${photoPath("id", photoId)}"${lang === "id" ? ' aria-current="true"' : ""} hreflang="id" lang="id">ID</a>
+              <a href="${photoPath("en", photoId)}"${lang === "en" ? ' aria-current="true"' : ""} hreflang="en" lang="en">EN</a>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>`;
+};
 
 export const notFound = async (request: Request, env: Env): Promise<Response> => {
   const page = await env.ASSETS.fetch(new URL("/404.html", request.url));
@@ -103,19 +129,16 @@ export async function renderPhotoPage(request: Request, env: Env, rawId: string 
   <meta property="og:image" content="${escapeHtml(imageUrl)}">
   <meta property="og:locale" content="${t.locale}">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
+  ${siteNav(lang, photo.id)}
   <main class="shell photo-view">
     <nav class="photo-nav" aria-label="${escapeHtml(t.navLabel)}">
-      <a href="${t.galleryLink}">${escapeHtml(t.back)}</a>
-      <span class="photo-nav-right">
-        ${index >= 0 ? `<span>${pad(index + 1)} / ${pad(order.length)}</span>` : ""}
-        <span class="lang-switch" aria-label="Language / Bahasa">
-          <a href="${photoPath("id", photo.id)}"${lang === "id" ? ' aria-current="true"' : ""} hreflang="id" lang="id">ID</a>
-          <a href="${photoPath("en", photo.id)}"${lang === "en" ? ' aria-current="true"' : ""} hreflang="en" lang="en">EN</a>
-        </span>
-      </span>
+      <a href="${t.galleryLink}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>${escapeHtml(t.back)}</a>
+      ${index >= 0 ? `<span>${pad(index + 1)} / ${pad(order.length)}</span>` : ""}
     </nav>
     <figure class="photo-figure">
       <img src="${escapeHtml(photo.src)}" alt="${escapeHtml(alt)}"${sizeAttributes} decoding="async" fetchpriority="high">
@@ -126,16 +149,17 @@ export async function renderPhotoPage(request: Request, env: Env, rawId: string 
       ${story ? `<div class="photo-story">
         ${storyHtml(story)}
       </div>` : ""}
-      <div class="photo-actions">
-        <button class="photo-share" id="shareButton" type="button">${escapeHtml(t.share)}</button>
+      <div class="photo-actions d-flex align-items-center gap-3 mt-4">
+        <button class="btn btn-outline-dark btn-site rounded-0" id="shareButton" type="button"><i class="bi bi-share me-2" aria-hidden="true"></i>${escapeHtml(t.share)}</button>
         <span class="photo-share-status" id="shareStatus" role="status"></span>
       </div>
     </section>
     <nav class="photo-pager" aria-label="${escapeHtml(t.pagerLabel)}">
-      ${previous ? `<a class="prev" rel="prev" href="${photoPath(lang, previous.id)}">← ${neighborCaption(previous)}</a>` : "<span></span>"}
-      ${next ? `<a class="next" rel="next" href="${photoPath(lang, next.id)}">${neighborCaption(next)} →</a>` : ""}
+      ${previous ? `<a class="prev" rel="prev" href="${photoPath(lang, previous.id)}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>${neighborCaption(previous)}</a>` : "<span></span>"}
+      ${next ? `<a class="next" rel="next" href="${photoPath(lang, next.id)}">${neighborCaption(next)}<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>` : ""}
     </nav>
   </main>
+  <script src="/assets/vendor/bootstrap.bundle.min.js" defer></script>
   <script>
     (function () {
       var button = document.getElementById("shareButton");

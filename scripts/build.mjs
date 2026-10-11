@@ -17,6 +17,10 @@ copyFileSync("src/styles.css", "dist/assets/styles.css");
 copyFileSync("node_modules/bootstrap/dist/css/bootstrap.min.css", "dist/assets/vendor/bootstrap.min.css");
 copyFileSync("node_modules/bootstrap/dist/js/bootstrap.bundle.min.js", "dist/assets/vendor/bootstrap.bundle.min.js");
 
+// Bootstrap Icons: CSS menunjuk ke ./fonts/, jadi folder fonts disalin sejajar dengan CSS-nya.
+copyFileSync("node_modules/bootstrap-icons/font/bootstrap-icons.min.css", "dist/assets/vendor/bootstrap-icons.min.css");
+cpSync("node_modules/bootstrap-icons/font/fonts", "dist/assets/vendor/fonts", { recursive: true });
+
 if (existsSync("public/photos")) {
   cpSync("public/photos", "dist/photos", { recursive: true });
 }
