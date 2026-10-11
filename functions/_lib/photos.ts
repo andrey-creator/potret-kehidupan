@@ -5,6 +5,8 @@ const HAS_THUMB =
   "CASE WHEN (SELECT thumb FROM photo_files WHERE id = substr(photos.src, 10)) IS NOT NULL THEN 1 ELSE 0 END AS has_thumb";
 
 export const PUBLIC_COLUMN_SETS = [
+  "id, src, alt, caption, size, sort_order, width, height, taken_at, location, story, caption_en, alt_en, location_en, story_en",
+  "id, src, alt, caption, size, sort_order, width, height, taken_at, location, story",
   "id, src, alt, caption, size, sort_order, width, height, taken_at, location, caption_en, alt_en, location_en",
   "id, src, alt, caption, size, sort_order, width, height, taken_at, location",
   "id, src, alt, caption, size, sort_order, width, height",

@@ -43,6 +43,9 @@ const lightboxImage = document.querySelector<HTMLImageElement>("#lightboxImage")
 const lightboxCaption = document.querySelector<HTMLElement>("#lightboxCaption");
 const lightboxCount = document.querySelector<HTMLElement>("#lightboxCount");
 const lightboxMeta = document.querySelector<HTMLElement>("#lightboxMeta");
+const lightboxStory = document.querySelector<HTMLElement>("#lightboxStory");
+const lightboxStoryText = document.querySelector<HTMLElement>("#lightboxStoryText");
+const lightboxReadMore = document.querySelector<HTMLAnchorElement>("#lightboxReadMore");
 const lightboxLink = document.querySelector<HTMLAnchorElement>("#lightboxLink");
 const lightboxShare = document.querySelector<HTMLButtonElement>("#lightboxShare");
 const lightboxStatus = document.querySelector<HTMLElement>("#lightboxStatus");
@@ -71,6 +74,7 @@ function pickText(base: string, english: string | null | undefined): string {
 const captionOf = (item: Photo): string => pickText(item.caption, item.caption_en);
 const altOf = (item: Photo): string => pickText(item.alt, item.alt_en);
 const locationOf = (item: Photo): string => pickText(item.location ?? "", item.location_en).trim();
+const storyOf = (item: Photo): string => pickText(item.story ?? "", item.story_en).replace(/\s+/g, " ").trim();
 const photoUrl = (id: number): string => (lang === "en" ? `/en/photo/${id}` : `/foto/${id}`);
 
 function formatDate(iso: string | null | undefined): string {
@@ -176,6 +180,16 @@ function preloadNeighbors(index: number): void {
   });
 }
 
+const EXCERPT_LENGTH = 110;
+
+/** Potongan awal cerita (di batas kata). `truncated` true jika ada yang dipotong. */
+function excerptOf(story: string): { text: string; truncated: boolean } {
+  if (story.length <= EXCERPT_LENGTH) return { text: story, truncated: false };
+  const cut = story.slice(0, EXCERPT_LENGTH);
+  const space = cut.lastIndexOf(" ");
+  return { text: `${(space > 40 ? cut.slice(0, space) : cut).replace(/[\s,.;:!?-]+$/, "")}…`, truncated: true };
+}
+
 function setStatus(text: string): void {
   if (lightboxStatus) lightboxStatus.textContent = text;
 }
@@ -194,8 +208,18 @@ function showLightbox(index: number, trigger?: HTMLElement | null): void {
     lightboxMeta.textContent = [formatDate(item.taken_at), locationOf(item)].filter(Boolean).join(" · ");
     lightboxMeta.hidden = !lightboxMeta.textContent;
   }
+  const story = storyOf(item);
+  const { text: storyText, truncated } = excerptOf(story);
+  if (lightboxStory && lightboxStoryText && lightboxReadMore) {
+    lightboxStory.hidden = !story;
+    lightboxStoryText.textContent = storyText;
+    // "Baca selengkapnya" hanya muncul jika cerita terpotong dan foto punya halaman sendiri.
+    lightboxReadMore.hidden = !(truncated && item.id);
+    if (item.id) lightboxReadMore.href = photoUrl(item.id);
+  }
   if (lightboxLink) {
-    lightboxLink.hidden = !item.id;
+    // Tautan umum disembunyikan bila "Baca selengkapnya" sudah menuju halaman yang sama.
+    lightboxLink.hidden = !item.id || (!!lightboxReadMore && !lightboxReadMore.hidden);
     if (item.id) lightboxLink.href = photoUrl(item.id);
   }
   if (lightboxShare) lightboxShare.hidden = !item.id;

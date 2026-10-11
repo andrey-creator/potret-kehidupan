@@ -69,7 +69,7 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
 .lightbox-image-wrap { position: relative; grid-row: 1 / -1; display: grid; min-width: 0; min-height: 0; place-items: center; overflow: hidden; }
 .lightbox-image { display: block; max-width: 100%; max-height: 100%; object-fit: contain; animation: image-in .35s var(--ease-out) both; }
 @keyframes image-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
-.lightbox-side { display: flex; width: clamp(8.5rem, 15vw, 12rem); flex-direction: column; justify-content: flex-end; gap: .8rem; padding-bottom: .15rem; color: var(--white); }
+.lightbox-side { display: flex; width: clamp(9.5rem, 19vw, 15rem); flex-direction: column; justify-content: flex-end; gap: .8rem; padding-bottom: .15rem; color: var(--white); }
 .lightbox-caption { margin: 0; font-size: clamp(1rem, 1.5vw, 1.3rem); line-height: 1.2; }
 .lightbox-count { margin: 0; color: #adb8a9; font-size: .65rem; letter-spacing: .14em; }
 .lightbox-modal .btn-outline-light { --bs-btn-hover-color: var(--white); --bs-btn-hover-bg: rgba(255, 255, 255, .13); --bs-btn-hover-border-color: var(--white); --bs-btn-active-color: var(--white); --bs-btn-active-bg: rgba(255, 255, 255, .2); --bs-btn-active-border-color: var(--white); --bs-btn-focus-shadow-rgb: 255, 255, 255; }
@@ -123,6 +123,10 @@ h1 { font-size: clamp(3.4rem, 8.2vw, 8rem); }
 
 /* Lightbox: tanggal, lokasi, tautan ke halaman foto */
 .lightbox-meta { margin: 0; color: #adb8a9; font-size: .65rem; letter-spacing: .12em; line-height: 1.5; text-transform: uppercase; }
+.lightbox-story { margin: 0; color: #d9dfd6; font-size: .8rem; line-height: 1.55; }
+.lightbox-story p { margin-bottom: .5rem; }
+.lightbox-readmore { color: var(--white); font-size: .65rem; letter-spacing: .14em; text-decoration: none; text-transform: uppercase; border-bottom: 1px solid #adb8a9; padding-bottom: .15rem; }
+.lightbox-readmore:hover, .lightbox-readmore:focus-visible { border-bottom-color: var(--white); }
 .lightbox-link, .lightbox-share { width: fit-content; font-size: .65rem; letter-spacing: .14em; text-transform: uppercase; }
 
 /* Halaman foto (/foto/:id) */
