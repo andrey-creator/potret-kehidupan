@@ -18,6 +18,29 @@ type PhotoInput = {
 
 const isPhotoSize = (value: unknown): value is PhotoSize => value === "regular" || value === "wide" || value === "tall";
 
+// Daftar lengkap untuk halaman admin: termasuk foto yang disembunyikan (is_published = 0).
+export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  if (!(await isAuthorized(request, env.ADMIN_TOKEN))) return json({ error: "Unauthorized" }, 401);
+  if (!env.DB) return json({ error: "D1 binding DB belum dikonfigurasi." }, 503);
+  try {
+    try {
+      const { results } = await env.DB.prepare(
+        "SELECT id, src, alt, caption, size, sort_order, is_published, width, height FROM photos ORDER BY sort_order ASC, id ASC"
+      ).all();
+      return json(results);
+    } catch {
+      // Kolom width/height belum ada (migrasi 0003 belum dijalankan).
+      const { results } = await env.DB.prepare(
+        "SELECT id, src, alt, caption, size, sort_order, is_published FROM photos ORDER BY sort_order ASC, id ASC"
+      ).all();
+      return json(results);
+    }
+  } catch (error) {
+    console.error("GET /api/admin/photos failed", error);
+    return json({ error: "Gagal membaca daftar foto." }, 500);
+  }
+};
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!(await isAuthorized(request, env.ADMIN_TOKEN))) return json({ error: "Unauthorized" }, 401);
   if (!env.DB) return json({ error: "D1 binding DB belum dikonfigurasi." }, 503);

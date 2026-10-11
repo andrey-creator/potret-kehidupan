@@ -70,6 +70,17 @@
     .tile .meta strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tile .meta span { color: var(--muted); }
     .tile button { display: block; width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 8px; font-size: .85rem; }
+    .modal { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; overflow-y: auto; background: rgba(0, 0, 0, .55); }
+    .modal-card { width: min(100%, 520px); padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+    .modal-card img { display: block; width: 100%; max-height: 220px; margin-bottom: 12px; object-fit: contain; background: var(--line); border-radius: 8px; }
+    .modal-card label { margin-top: 10px; }
+    .modal-card .row { margin-top: 14px; }
+    .tile.is-hidden { border-style: dashed; }
+    .tile.is-hidden img { opacity: .4; }
+    .tile .pair { display: flex; border-top: 1px solid var(--line); }
+    .tile .pair button { flex: 1; width: auto; border-top: 0; }
+    .tile .pair button + button { border-left: 1px solid var(--line); }
+    .modal-card input[type=file] { margin-bottom: 4px; }
     [hidden] { display: none !important; }
   </style>
 </head>
@@ -107,12 +118,32 @@
 
     <section>
       <h2>Foto di galeri <span id="count" class="status"></span></h2>
-      <p class="sub" style="margin:0 0 12px;font-size:.85rem">Foto pertama (★) tampil sebagai foto unggulan di header situs.</p>
+      <p class="sub" style="margin:0 0 12px;font-size:.85rem">Foto pertama yang tampil (★) menjadi foto unggulan di header. Pakai ← Maju / Mundur → untuk mengatur urutan. Foto yang disembunyikan tidak tampil di situs, tetapi tidak dihapus.</p>
       <div id="gallery" class="grid"></div>
       <p id="galleryMsg" class="msg" role="status"></p>
     </section>
   </div>
 </main>
+
+<div id="editModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editTitle" hidden>
+  <div class="modal-card">
+    <h2 id="editTitle">Edit foto</h2>
+    <img id="editPreview" alt="">
+    <label for="editFile">Ganti file foto (opsional; kosongkan jika tidak diganti)</label>
+    <input id="editFile" type="file" accept="image/jpeg,image/png,image/webp">
+    <label for="editCaption">Caption (wajib, maks. 120 karakter)</label>
+    <input id="editCaption" type="text" maxlength="120">
+    <label for="editAlt">Deskripsi foto / alt (kosongkan untuk memakai caption)</label>
+    <input id="editAlt" type="text">
+    <label for="editSize">Ukuran di galeri</label>
+    <select id="editSize"></select>
+    <p id="editMsg" class="msg" role="status"></p>
+    <div class="row">
+      <button id="editSave" class="primary" type="button">Simpan</button>
+      <button id="editCancel" type="button">Batal</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -141,7 +172,9 @@
     say($("loginMsg"), "Memeriksa token…");
     try {
       var res = await fetch("/api/admin/auth-check", { method: "POST", headers: { Authorization: "Bearer " + candidate } });
-      if (!res.ok) {
+      var body = null;
+      try { body = await res.json(); } catch (e) {}
+      if (!res.ok || !body || body.ok !== true) {
         say($("loginMsg"), "Token salah, atau secret ADMIN_TOKEN belum aktif di Cloudflare.", "err");
         return false;
       }
@@ -167,86 +200,277 @@
   }
 
   // ---------- Gallery ----------
+  var photos = [];
+  var busy = false;
+
+  function isPublished(p) { return Number(p.is_published) !== 0; }
+
+  function firstPublishedIndex() {
+    for (var i = 0; i < photos.length; i++) if (isPublished(photos[i])) return i;
+    return -1;
+  }
+
+  async function errorText(res) {
+    try { var b = await res.json(); if (b && b.error) return b.error; } catch (e) {}
+    return "HTTP " + res.status;
+  }
+
   async function loadGallery() {
-    var box = $("gallery");
     say($("galleryMsg"), "Memuat…");
     try {
-      var res = await fetch("/api/photos?_=" + Date.now(), { cache: "no-store" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      var photos = await res.json();
-      box.textContent = "";
-      var firstSort = photos.length ? photos[0].sort_order : 0;
-      photos.forEach(function (p, i) {
-        var tile = document.createElement("div");
-        tile.className = "tile";
-
-        var img = document.createElement("img");
-        img.src = p.src;
-        img.alt = p.alt;
-        img.loading = "lazy";
-
-        var meta = document.createElement("div");
-        meta.className = "meta";
-        var cap = document.createElement("strong");
-        cap.textContent = p.caption;
-        var info = document.createElement("span");
-        info.textContent = (i === 0 ? "★ Unggulan · " : "") + "ID " + p.id + " · " + p.size;
-        meta.appendChild(cap);
-        meta.appendChild(info);
-
-        var del = document.createElement("button");
-        del.type = "button";
-        del.className = "danger";
-        del.textContent = "Hapus";
-        del.addEventListener("click", function () { removePhoto(p, del); });
-
-        tile.appendChild(img);
-        tile.appendChild(meta);
-        if (i > 0) {
-          var feature = document.createElement("button");
-          feature.type = "button";
-          feature.textContent = "Jadikan unggulan";
-          feature.addEventListener("click", function () { makeFeatured(p, firstSort, feature); });
-          tile.appendChild(feature);
-        }
-        tile.appendChild(del);
-        box.appendChild(tile);
-      });
-      $("count").textContent = "(" + photos.length + ")";
+      var res = await fetch("/api/admin/photos?_=" + Date.now(), { cache: "no-store", headers: authHeaders() });
+      if (!res.ok) throw new Error(await errorText(res));
+      photos = await res.json();
+      renderGallery();
       say($("galleryMsg"), photos.length ? "" : "Belum ada foto.");
     } catch (e) {
-      say($("galleryMsg"), "Gagal memuat galeri. Cek /api/photos.", "err");
+      say($("galleryMsg"), "Gagal memuat galeri: " + e.message, "err");
     }
   }
 
-  async function makeFeatured(p, firstSort, btn) {
-    btn.disabled = true;
+  function makeButton(label, onClick, className) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    if (className) b.className = className;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  function renderGallery() {
+    var box = $("gallery");
+    box.textContent = "";
+    var featuredIndex = firstPublishedIndex();
+    var hiddenCount = 0;
+
+    photos.forEach(function (p, i) {
+      var published = isPublished(p);
+      if (!published) hiddenCount++;
+
+      var tile = document.createElement("div");
+      tile.className = "tile" + (published ? "" : " is-hidden");
+
+      var img = document.createElement("img");
+      img.src = p.src;
+      img.alt = p.alt;
+      img.loading = "lazy";
+
+      var meta = document.createElement("div");
+      meta.className = "meta";
+      var cap = document.createElement("strong");
+      cap.textContent = p.caption;
+      var info = document.createElement("span");
+      info.textContent = (i === featuredIndex ? "★ Unggulan · " : "") + (published ? "" : "Tersembunyi · ") +
+        "#" + (i + 1) + " · ID " + p.id + " · " + p.size;
+      meta.appendChild(cap);
+      meta.appendChild(info);
+
+      var pair = document.createElement("div");
+      pair.className = "pair";
+      var earlier = makeButton("← Maju", function () { movePhoto(i, -1); });
+      var later = makeButton("Mundur →", function () { movePhoto(i, 1); });
+      if (i === 0) { earlier.disabled = true; earlier.setAttribute("data-edge", ""); }
+      if (i === photos.length - 1) { later.disabled = true; later.setAttribute("data-edge", ""); }
+      pair.appendChild(earlier);
+      pair.appendChild(later);
+
+      tile.appendChild(img);
+      tile.appendChild(meta);
+      tile.appendChild(pair);
+      tile.appendChild(makeButton("Edit", function () { openEdit(p); }));
+      if (published && i !== featuredIndex) {
+        tile.appendChild(makeButton("Jadikan unggulan", function () { makeFeatured(p); }));
+      }
+      tile.appendChild(makeButton(published ? "Sembunyikan" : "Tampilkan", function () { toggleHidden(p); }));
+      tile.appendChild(makeButton("Hapus", function () { removePhoto(p); }, "danger"));
+      box.appendChild(tile);
+    });
+
+    $("count").textContent = "(" + photos.length + (hiddenCount ? ", " + hiddenCount + " tersembunyi" : "") + ")";
+  }
+
+  function setTileButtons(disabled) {
+    Array.prototype.forEach.call(document.querySelectorAll(".tile button"), function (b) {
+      b.disabled = disabled || b.hasAttribute("data-edge");
+    });
+  }
+
+  // Menjalankan satu aksi pada daftar foto; tombol dikunci selama proses supaya tidak saling menimpa.
+  async function run(action, failPrefix) {
+    if (busy) return;
+    busy = true;
+    setTileButtons(true);
     try {
-      var headers = authHeaders();
-      headers["Content-Type"] = "application/json";
-      var res = await fetch("/api/admin/photos/" + p.id, {
-        method: "PUT",
-        headers: headers,
-        body: JSON.stringify({ src: p.src, alt: p.alt, caption: p.caption, size: p.size, sort_order: firstSort - 1, is_published: true })
-      });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      loadGallery();
+      await action();
     } catch (e) {
-      btn.disabled = false;
-      say($("galleryMsg"), "Gagal menjadikan unggulan (kode: " + e.message + ").", "err");
+      say($("galleryMsg"), failPrefix + e.message, "err");
+    } finally {
+      busy = false;
+      setTileButtons(false);
     }
   }
 
-  async function removePhoto(p, btn) {
-    if (!confirm('Hapus foto "' + p.caption + '"? Ini tidak bisa dibatalkan.')) return;
-    btn.disabled = true;
-    try {
+  async function putPhoto(p, overrides) {
+    var body = {
+      src: p.src, alt: p.alt, caption: p.caption, size: p.size,
+      sort_order: typeof p.sort_order === "number" ? p.sort_order : 0,
+      is_published: isPublished(p)
+    };
+    Object.keys(overrides).forEach(function (k) { body[k] = overrides[k]; });
+    var headers = authHeaders();
+    headers["Content-Type"] = "application/json";
+    return fetch("/api/admin/photos/" + p.id, { method: "PUT", headers: headers, body: JSON.stringify(body) });
+  }
+
+  async function saveOrder(ids) {
+    var headers = authHeaders();
+    headers["Content-Type"] = "application/json";
+    var res = await fetch("/api/admin/reorder", { method: "POST", headers: headers, body: JSON.stringify({ ids: ids }) });
+    if (!res.ok) throw new Error(await errorText(res));
+    await loadGallery();
+  }
+
+  function movePhoto(index, delta) {
+    var target = index + delta;
+    if (target < 0 || target >= photos.length) return;
+    run(async function () {
+      var ids = photos.map(function (p) { return p.id; });
+      var moved = ids.splice(index, 1)[0];
+      ids.splice(target, 0, moved);
+      await saveOrder(ids);
+    }, "Gagal memindahkan foto: ");
+  }
+
+  function makeFeatured(p) {
+    run(async function () {
+      var ids = photos.map(function (x) { return x.id; }).filter(function (id) { return id !== p.id; });
+      ids.unshift(p.id);
+      await saveOrder(ids);
+      say($("galleryMsg"), "Foto dijadikan unggulan.", "ok");
+    }, "Gagal menjadikan unggulan: ");
+  }
+
+  function toggleHidden(p) {
+    var willPublish = !isPublished(p);
+    run(async function () {
+      var res = await putPhoto(p, { is_published: willPublish });
+      if (!res.ok) throw new Error(await errorText(res));
+      await loadGallery();
+      say($("galleryMsg"), willPublish ? "Foto ditampilkan lagi di situs." : "Foto disembunyikan dari situs (tidak dihapus).", "ok");
+    }, "Gagal mengubah status: ");
+  }
+
+  function removePhoto(p) {
+    if (!confirm('Hapus foto "' + p.caption + '" secara permanen? Ini tidak bisa dibatalkan.\n\nJika hanya ingin menyembunyikannya dari situs, pakai tombol Sembunyikan.')) return;
+    run(async function () {
       var res = await fetch("/api/admin/photos/" + p.id, { method: "DELETE", headers: authHeaders() });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      loadGallery();
+      if (!res.ok) throw new Error(await errorText(res));
+      await loadGallery();
+    }, "Gagal menghapus: ");
+  }
+
+  // ---------- Edit ----------
+  var editing = null;
+  var editNewFile = null;
+  var editPreviewUrl = "";
+
+  function buildSizeOptions(allowAuto, selected) {
+    var select = $("editSize");
+    select.textContent = "";
+    var options = [];
+    if (allowAuto) options.push(["auto", "Otomatis (sesuai bentuk foto)"]);
+    options.push(["regular", "Regular"], ["wide", "Lebar"], ["tall", "Tinggi"]);
+    options.forEach(function (o) {
+      var opt = document.createElement("option");
+      opt.value = o[0];
+      opt.textContent = o[1];
+      if (o[0] === selected) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  function resetEditFile() {
+    if (editPreviewUrl) URL.revokeObjectURL(editPreviewUrl);
+    editPreviewUrl = "";
+    editNewFile = null;
+    $("editFile").value = "";
+  }
+
+  function openEdit(p) {
+    editing = p;
+    resetEditFile();
+    $("editPreview").src = p.src;
+    $("editCaption").value = p.caption;
+    $("editAlt").value = p.alt === p.caption ? "" : p.alt;
+    buildSizeOptions(Boolean(p.width && p.height), p.size);
+    say($("editMsg"), "");
+    $("editSave").disabled = false;
+    $("editModal").hidden = false;
+    $("editCaption").focus();
+  }
+
+  function closeEdit() {
+    resetEditFile();
+    $("editModal").hidden = true;
+    editing = null;
+  }
+
+  function onEditFileChange() {
+    var file = $("editFile").files[0] || null;
+    if (editPreviewUrl) URL.revokeObjectURL(editPreviewUrl);
+    editPreviewUrl = "";
+    editNewFile = file && /^image\/(jpeg|png|webp)$/.test(file.type) ? file : null;
+    if (file && !editNewFile) {
+      $("editFile").value = "";
+      say($("editMsg"), "Format file harus JPEG, PNG, atau WebP.", "err");
+    }
+    if (editNewFile) {
+      editPreviewUrl = URL.createObjectURL(editNewFile);
+      $("editPreview").src = editPreviewUrl;
+      buildSizeOptions(true, $("editSize").value);
+      say($("editMsg"), "File baru akan menggantikan foto lama saat Anda menekan Simpan.");
+    } else if (editing) {
+      $("editPreview").src = editing.src;
+    }
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    var p = editing;
+    var caption = $("editCaption").value.trim();
+    if (!caption) { say($("editMsg"), "Caption wajib diisi.", "err"); return; }
+    var alt = $("editAlt").value.trim() || caption;
+    $("editSave").disabled = true;
+    try {
+      var src = p.src, width = p.width, height = p.height;
+      if (editNewFile) {
+        say($("editMsg"), "Mengecilkan foto…");
+        var shrunk = await shrink(editNewFile);
+        var form = new FormData();
+        form.append("file", shrunk.blob, "foto.jpg");
+        form.append("width", String(shrunk.width));
+        form.append("height", String(shrunk.height));
+        say($("editMsg"), "Mengunggah file baru (" + Math.round(shrunk.blob.size / 1024) + " KB)…");
+        var imageRes = await fetch("/api/admin/photos/" + p.id + "/image", { method: "POST", headers: authHeaders(), body: form });
+        if (!imageRes.ok) throw new Error(await errorText(imageRes));
+        src = (await imageRes.json()).src;
+        width = shrunk.width;
+        height = shrunk.height;
+        // File sudah diganti di server; simpan di data lokal agar percobaan ulang tidak mengembalikan alamat lama.
+        p.src = src; p.width = width; p.height = height;
+        editNewFile = null;
+      }
+      var size = $("editSize").value;
+      if (size === "auto") size = (width && height) ? autoSize(width, height) : p.size;
+      say($("editMsg"), "Menyimpan…");
+      var res = await putPhoto(p, { src: src, alt: alt, caption: caption, size: size });
+      if (!res.ok) throw new Error(await errorText(res));
+      closeEdit();
+      await loadGallery();
+      say($("galleryMsg"), "Perubahan disimpan.", "ok");
     } catch (e) {
-      btn.disabled = false;
-      say($("galleryMsg"), "Gagal menghapus (kode: " + e.message + ").", "err");
+      $("editSave").disabled = false;
+      say($("editMsg"), "Gagal menyimpan: " + e.message, "err");
     }
   }
 
@@ -445,6 +669,12 @@
   $("files").addEventListener("change", function (e) { addFiles(e.target.files); });
   $("uploadBtn").addEventListener("click", uploadAll);
   $("logoutBtn").addEventListener("click", logout);
+  $("editSave").addEventListener("click", saveEdit);
+  $("editFile").addEventListener("change", onEditFileChange);
+  $("editCancel").addEventListener("click", closeEdit);
+  $("editModal").addEventListener("click", function (e) { if (e.target === $("editModal")) closeEdit(); });
+  $("editCaption").addEventListener("keydown", function (e) { if (e.key === "Enter") saveEdit(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("editModal").hidden) closeEdit(); });
 
   var saved = safeGet();
   if (saved) {

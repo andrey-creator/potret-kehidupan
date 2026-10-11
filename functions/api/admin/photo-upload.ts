@@ -1,22 +1,11 @@
 import { isAuthorized, json } from "../../_lib/auth";
+import { toBase64, toDimension, validateImage } from "../../_lib/images";
 
 type PhotoSize = "regular" | "wide" | "tall";
 
 type Env = {
   DB: D1Database;
   ADMIN_TOKEN?: string;
-};
-
-const MAX_BYTES = 1_300_000; // base64 ~1,73 MB, masih di bawah batas 2 MB per baris D1
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
-const toBase64 = (buffer: ArrayBuffer): string => {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  }
-  return btoa(binary);
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
@@ -30,24 +19,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const alt = String(form.get("alt") ?? "").trim() || caption;
     const sizeValue = String(form.get("size") ?? "regular");
     const size: PhotoSize = sizeValue === "wide" || sizeValue === "tall" ? sizeValue : "regular";
-    const toDimension = (value: FormDataEntryValue | null): number | null => {
-      const n = Number(value);
-      return Number.isInteger(n) && n > 0 && n <= 20000 ? n : null;
-    };
     const width = toDimension(form.get("width"));
     const height = toDimension(form.get("height"));
 
-    if (!(file instanceof File) || file.size === 0) return json({ error: "File foto wajib diisi." }, 400);
-    if (!ALLOWED_TYPES.includes(file.type)) return json({ error: "Format harus JPEG, PNG, atau WebP." }, 400);
-    if (file.size > MAX_BYTES) return json({ error: "Foto terlalu besar. Maksimum sekitar 1,3 MB setelah dikecilkan." }, 413);
+    const invalid = validateImage(file);
+    if (invalid) return json({ error: invalid.error }, invalid.status);
     if (!caption || caption.length > 120) return json({ error: "Caption wajib diisi (maksimum 120 karakter)." }, 400);
 
+    const image = file as File;
     const id = crypto.randomUUID();
-    const data = toBase64(await file.arrayBuffer());
+    const data = toBase64(await image.arrayBuffer());
     const src = `/api/img/${id}`;
 
     await env.DB.batch([
-      env.DB.prepare("INSERT INTO photo_files (id, mime, data, size_bytes) VALUES (?, ?, ?, ?)").bind(id, file.type, data, file.size),
+      env.DB.prepare("INSERT INTO photo_files (id, mime, data, size_bytes) VALUES (?, ?, ?, ?)").bind(id, image.type, data, image.size),
       env.DB.prepare(
         "INSERT INTO photos (src, alt, caption, size, sort_order, width, height) VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM photos), ?, ?)"
       ).bind(src, alt, caption, size, width, height)
