@@ -15,12 +15,20 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     console.error("GET /sitemap.xml failed", error);
   }
 
-  const urls = [`  <url><loc>${origin}/</loc></url>`].concat(rows.map((row) => {
+  // Setiap halaman punya versi Indonesia dan Inggris yang saling menaut (hreflang).
+  const entry = (idPath: string, enPath: string, lastmod: string): string => {
+    const alternates =
+      `<xhtml:link rel="alternate" hreflang="id" href="${origin}${idPath}"/>` +
+      `<xhtml:link rel="alternate" hreflang="en" href="${origin}${enPath}"/>`;
+    return [idPath, enPath].map((path) => `  <url><loc>${origin}${path}</loc>${lastmod}${alternates}</url>`).join("\n");
+  };
+
+  const urls = [entry("/", "/en/", "")].concat(rows.map((row) => {
     const lastmod = row.updated_at && /^\d{4}-\d{2}-\d{2}/.test(row.updated_at) ? `<lastmod>${row.updated_at.slice(0, 10)}</lastmod>` : "";
-    return `  <url><loc>${origin}/foto/${row.id}</loc>${lastmod}</url>`;
+    return entry(`/foto/${row.id}`, `/en/photo/${row.id}`, lastmod);
   }));
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls.join("\n")}\n</urlset>\n`;
   return new Response(xml, {
     headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=600" }
   });

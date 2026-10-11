@@ -4,7 +4,8 @@ Website galeri foto personal di Cloudflare Pages. Frontend statis (HTML + CSS + 
 
 ## Teknologi
 
-- **Frontend:** HTML, CSS custom, dan TypeScript (dikompilasi ke `dist/assets/app.js`).
+- **Frontend:** HTML, CSS custom, dan TypeScript (dikompilasi ke `dist/assets/app.js`). Dua bahasa: Indonesia (`/`) dan Inggris (`/en/`).
+- **Bootstrap 5.3.3:** dipasang lewat npm dan disalin ke `dist/assets/vendor/` saat build (tanpa CDN). Dipakai penuh di halaman admin; halaman publik memakai CSS Bootstrap sebagai dasar dan tampilan khusus di `styles.css`.
 - **API:** Cloudflare Pages Functions (`functions/`).
 - **Database + foto:** Cloudflare D1 (tabel `photos` dan `photo_files`).
 - **Source control:** GitHub. Cloudflare Pages membangun otomatis setiap push ke `main`.
@@ -12,7 +13,8 @@ Website galeri foto personal di Cloudflare Pages. Frontend statis (HTML + CSS + 
 ## Struktur penting
 
 ```text
-public/index.html            # halaman publik
+public/index.html            # halaman publik (Indonesia)
+public/en/index.html         # halaman publik (Inggris)
 public/admin.html            # halaman admin (/admin)
 public/404.html              # halaman 404
 public/_headers              # header keamanan untuk file statis
@@ -25,10 +27,12 @@ functions/api/photos.ts      # GET foto publik
 functions/api/photos/[id].ts # GET satu foto published
 functions/api/img/[id].ts    # menyajikan file foto dari D1 (?s=thumb untuk versi kecil)
 functions/foto/[id].ts       # halaman tiap foto (/foto/:id), dirender di server
+functions/en/                # versi Inggris: /en/ (og + hreflang) dan /en/photo/:id
+functions/_lib/              # auth, images, photos (kueri bertingkat), i18n, home, photo-page
 functions/sitemap.xml.ts     # /sitemap.xml
 functions/robots.txt.ts      # /robots.txt
 functions/api/admin/*        # semua endpoint tulis (token admin)
-migrations/                  # 0001 tabel photos, 0002 photo_files, 0003 width/height, 0004 thumbnail + tanggal/lokasi/cerita
+migrations/                  # 0001 tabel photos, 0002 photo_files, 0003 width/height, 0004 thumbnail + tanggal/lokasi/cerita, 0005 teks bahasa Inggris
 scripts/                     # build.mjs dan prune-dev.mjs
 wrangler.toml                # binding D1
 ```
@@ -36,7 +40,7 @@ wrangler.toml                # binding D1
 ## Setup Cloudflare (sekali saja)
 
 1. Buat database D1 `potret-kehidupan`, salin `database_id` ke `wrangler.toml`.
-2. Jalankan isi `migrations/0001_create_photos.sql`, `0002_photo_files.sql`, `0003_photo_dimensions.sql`, dan `0004_thumbs_and_story.sql` secara berurutan (satu pernyataan per eksekusi jika memakai Console) (lewat Console D1 di dashboard atau `wrangler d1 migrations apply potret-kehidupan --remote`).
+2. Jalankan isi `migrations/0001_create_photos.sql`, `0002_photo_files.sql`, `0003_photo_dimensions.sql`, `0004_thumbs_and_story.sql`, dan `0005_english_version.sql` secara berurutan (satu pernyataan per eksekusi jika memakai Console) (lewat Console D1 di dashboard atau `wrangler d1 migrations apply potret-kehidupan --remote`).
 3. Buat project **Pages** (bukan Workers) dari repository GitHub: production branch `main`, build command `npm ci && npm run build`, output `dist`.
 4. Tambahkan secret `ADMIN_TOKEN` di Settings project. Buat dengan:
    ```bash
@@ -56,6 +60,7 @@ Update berikutnya cukup `git add .`, `git commit`, `git push`.
 - Batas satu foto sekitar 1,3 MB setelah dikecilkan (batas baris D1 2 MB).
 - Upload dan ganti file otomatis membuat **thumbnail** 800 px untuk grid galeri. Untuk foto lama, klik **Buat thumbnail foto lama**.
 - **Edit** juga mengisi tanggal, lokasi, dan cerita singkat. Foto yang punya data itu menampilkannya di lightbox dan di halaman `/foto/:id`.
+- **Edit → tab English**: caption, deskripsi (alt), lokasi, dan cerita versi Inggris. Semua opsional; yang kosong memakai teks Indonesia di `/en/`.
 - **Unduh cadangan (.zip)** berisi `photos.json` (semua metadata, termasuk foto tersembunyi dan cerita) dan semua file foto. Pemulihan belum otomatis: foto bisa diunggah ulang dari zip. Cadangan database penuh: `npx wrangler d1 export potret-kehidupan --remote --output cadangan.sql`.
 
 ## Endpoint API
@@ -66,7 +71,8 @@ Publik:
 GET /api/photos          # foto yang published
 GET /api/photos/:id      # satu foto published
 GET /api/img/:id         # file foto dari D1 (tambahkan ?s=thumb untuk versi kecil)
-GET /foto/:id            # halaman foto (HTML)
+GET /foto/:id            # halaman foto (HTML, Indonesia)
+GET /en/, /en/photo/:id  # versi Inggris
 GET /sitemap.xml, /robots.txt
 ```
 
@@ -110,3 +116,18 @@ Di `localhost`, jika API belum siap, galeri memakai foto placeholder dari `src/d
 - SVG ditolak saat upload.
 - `public/_headers` memasang header dasar untuk file statis; `/admin` ditandai noindex dan tidak di-cache.
 - Opsional: lindungi `/admin`, `/admin.html`, dan `/api/admin/*` dengan Cloudflare Access (Zero Trust → Access → Self-hosted). Aturan per path umumnya butuh custom domain; di `*.pages.dev` mungkin tidak berfungsi. `ADMIN_TOKEN` tetap menjadi lapis pengaman utama.
+
+## Lightbox dan berbagi
+
+- Geser kiri/kanan di layar sentuh untuk pindah foto; panah kiri/kanan dan Esc di keyboard.
+- Foto sebelum dan sesudahnya dimuat lebih dulu agar perpindahan terasa instan.
+- Saat ditutup, fokus kembali ke foto yang sedang dilihat. Tab berputar di dalam lightbox.
+- Tombol **Bagikan** memakai Web Share API di HP, atau menyalin tautan halaman foto di komputer.
+- Animasi dikurangi untuk pengguna dengan pengaturan `prefers-reduced-motion`.
+
+## Bahasa
+
+- `/` Indonesia dan `/en/` Inggris, saling menaut lewat tombol ID | EN dan tag `hreflang`.
+- Teks tetap di halaman: `public/index.html` dan `public/en/index.html` (termasuk teks pengantar).
+- Teks tiap foto: lewat tab English di Edit (migrasi 0005).
+- `/sitemap.xml` memuat kedua versi dengan alternatif `hreflang`.

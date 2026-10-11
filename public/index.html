@@ -15,8 +15,7 @@
   <meta property="og:description" content="Kepingan hidup dalam gambar.">
   <meta property="og:locale" content="id_ID">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap.min.css">
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
@@ -28,6 +27,10 @@
       <nav class="header-links" aria-label="Media sosial (atas)">
         <a class="social-link" href="https://www.instagram.com/andreyson_hamilton_a" target="_blank" rel="noreferrer">Instagram</a>
         <a class="social-link" href="https://youtube.com/@aryasatyakeandre" target="_blank" rel="noreferrer">YouTube</a>
+      </nav>
+      <nav class="lang-switch" aria-label="Bahasa / Language">
+        <a href="/" hreflang="id" lang="id" aria-current="true">ID</a>
+        <a href="/en/" hreflang="en" lang="en">EN</a>
       </nav>
     </div>
     <div class="header-intro">
@@ -74,6 +77,8 @@
         <p class="lightbox-caption" id="lightboxCaption"></p>
         <p class="lightbox-meta" id="lightboxMeta" hidden></p>
         <a class="lightbox-link" id="lightboxLink" href="#" hidden>Buka halaman foto →</a>
+        <button class="lightbox-share" id="lightboxShare" type="button" hidden>Bagikan</button>
+        <p class="lightbox-status" id="lightboxStatus" role="status"></p>
         <p class="lightbox-count" id="lightboxCount"></p>
         <div class="lightbox-controls" aria-label="Navigasi foto">
           <button class="lightbox-control" id="lightboxPrevious" type="button" aria-label="Foto sebelumnya">←</button>

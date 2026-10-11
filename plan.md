@@ -5,6 +5,7 @@ Satu halaman untuk berbagi perjalanan hidup lewat foto dan caption singkat. Tamp
 
 ## Arsitektur
 - **Hosting:** Cloudflare Pages, terhubung ke branch `main` di GitHub.
+- **Bahasa:** halaman Indonesia (`/`) dan Inggris (`/en/`), teks per foto di kolom `*_en` dengan cadangan ke teks Indonesia.
 - **Frontend:** `public/index.html`, `src/styles.css`, dan `src/app.ts` (dikompilasi ke `dist/assets/app.js`).
 - **API:** Pages Functions di `functions/`. Endpoint publik di `/api/photos`, `/api/img`; endpoint tulis di `/api/admin/*`.
 - **Data:** D1. Tabel `photos` menyimpan metadata (caption, alt, ukuran, urutan, lebar, tinggi, status publish, tanggal, lokasi, cerita). Tabel `photo_files` menyimpan file foto dan thumbnail (base64).

@@ -17,7 +17,17 @@ type PhotoInput = {
   taken_at?: string | null;
   location?: string | null;
   story?: string | null;
+  caption_en?: string | null;
+  alt_en?: string | null;
+  location_en?: string | null;
+  story_en?: string | null;
 };
+
+// Kolom opsional dan panjang maksimumnya. Hanya yang dikirim yang diubah (null atau "" = dikosongkan).
+const OPTIONAL_FIELDS = [
+  ["taken_at", 10], ["location", 80], ["story", 1200],
+  ["caption_en", 120], ["alt_en", 300], ["location_en", 80], ["story_en", 1200]
+] as const;
 
 const isPhotoSize = (value: unknown): value is PhotoSize => value === "regular" || value === "wide" || value === "tall";
 const getParam = (value: string | string[] | undefined): string | undefined => Array.isArray(value) ? value[0] : value;
@@ -42,23 +52,23 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
       input.src, input.alt, input.caption, input.size ?? "regular", input.sort_order ?? 0, input.is_published === false ? 0 : 1
     ];
 
-    // Kolom opsional: hanya diubah jika dikirim (null atau string kosong = dikosongkan).
-    const optional = (key: "taken_at" | "location" | "story", max: number): string | null | undefined => {
-      if (!(key in input)) return undefined;
+    for (const [key, max] of OPTIONAL_FIELDS) {
+      if (!(key in input)) continue;
       const raw = input[key];
-      if (raw === null || raw === "") return null;
-      if (typeof raw !== "string" || raw.length > max) throw new RangeError(key);
-      return raw.trim() || null;
-    };
-    const takenAt = optional("taken_at", 10);
-    if (takenAt && (!/^\d{4}-\d{2}-\d{2}$/.test(takenAt) || Number.isNaN(Date.parse(takenAt)))) {
-      return json({ error: "Tanggal harus berformat YYYY-MM-DD." }, 400);
+      let value: string | null;
+      if (raw === null || raw === "") {
+        value = null;
+      } else if (typeof raw !== "string" || raw.length > max) {
+        throw new RangeError(key);
+      } else {
+        value = raw.trim() || null;
+      }
+      if (key === "taken_at" && value && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(value)))) {
+        return json({ error: "Tanggal harus berformat YYYY-MM-DD." }, 400);
+      }
+      sets.push(`${key} = ?`);
+      values.push(value);
     }
-    const location = optional("location", 80);
-    const story = optional("story", 1200);
-    if (takenAt !== undefined) { sets.push("taken_at = ?"); values.push(takenAt); }
-    if (location !== undefined) { sets.push("location = ?"); values.push(location); }
-    if (story !== undefined) { sets.push("story = ?"); values.push(story); }
 
     const result = await env.DB.prepare(
       `UPDATE photos SET ${sets.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`
@@ -67,7 +77,7 @@ export const onRequestPut: PagesFunction<Env> = async ({ request, env, params })
   } catch (error) {
     console.error("PUT /api/admin/photos/:id failed", error);
     if (error instanceof RangeError) return json({ error: `Isian ${error.message} terlalu panjang.` }, 400);
-    return json({ error: "Payload JSON tidak valid atau update gagal. Jika baru memakai tanggal, lokasi, atau cerita, pastikan migrasi 0004 sudah dijalankan." }, 400);
+    return json({ error: "Payload JSON tidak valid atau update gagal. Jika baru memakai tanggal, lokasi, atau cerita, pastikan migrasi 0004 dan 0005 sudah dijalankan." }, 400);
   }
 };
 

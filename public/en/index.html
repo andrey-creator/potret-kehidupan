@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Potret Kehidupan — fragments of life, in pictures.">
+  <meta name="theme-color" content="#f1eee8">
+  <title>Potret Kehidupan — Fragments of life, in pictures.</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- og:image, og:url, canonical, dan hreflang disisipkan otomatis oleh functions/en/index.ts dari foto unggulan. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Potret Kehidupan">
+  <meta property="og:title" content="Potret Kehidupan">
+  <meta property="og:description" content="Fragments of life, in pictures.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="site-header shell">
+    <div class="header-rule"></div>
+    <div class="header-meta">
+      <span>Personal album</span>
+      <span>Visual journal · <span id="currentYear">2026</span></span>
+      <nav class="header-links" aria-label="Social media (top)">
+        <a class="social-link" href="https://www.instagram.com/andreyson_hamilton_a" target="_blank" rel="noreferrer">Instagram</a>
+        <a class="social-link" href="https://youtube.com/@aryasatyakeandre" target="_blank" rel="noreferrer">YouTube</a>
+      </nav>
+      <nav class="lang-switch" aria-label="Bahasa / Language">
+        <a href="/" hreflang="id" lang="id">ID</a>
+        <a href="/en/" hreflang="en" lang="en" aria-current="true">EN</a>
+      </nav>
+    </div>
+    <div class="header-intro">
+      <div class="intro-copy">
+        <h1>Potret<br>Kehidupan</h1>
+        <p class="intro-note">Fragments of life, in pictures.</p>
+        <!-- EDIT TEKS PENGANTAR (BAHASA INGGRIS) DI SINI. -->
+        <p class="intro-lede">A collection of portraits from ordinary days: faces, places, and light I want to remember. Every photo is a small piece of a story. Click a photo to see it larger.</p>
+        <a class="intro-more" href="#gallery">See all moments ↓</a>
+      </div>
+      <!-- Foto unggulan diisi otomatis dari foto pertama di galeri. -->
+      <figure class="featured" id="featured" hidden></figure>
+    </div>
+  </header>
+
+  <main class="gallery-section shell">
+    <div class="gallery-heading" aria-hidden="true">
+      <p>Saved fragments</p>
+      <p><span id="galleryCount">—</span> moments</p>
+    </div>
+    <section class="gallery" id="gallery" aria-label="Potret Kehidupan photo gallery">
+      <div class="gallery-loading" id="galleryLoading" role="status">Loading moments…</div>
+    </section>
+  </main>
+
+  <footer class="site-footer shell">
+    <div class="footer-rule"></div>
+    <div class="footer-meta">
+      <span class="footer-name">Aryasatya Keandre · <span id="footerYear">2026</span></span>
+      <nav class="footer-links" aria-label="Social media links">
+        <a class="social-link" href="https://www.instagram.com/andreyson_hamilton_a" target="_blank" rel="noreferrer">Instagram</a>
+        <a class="social-link" href="https://youtube.com/@aryasatyakeandre" target="_blank" rel="noreferrer">YouTube</a>
+      </nav>
+    </div>
+  </footer>
+
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Enlarged photo view" hidden>
+    <div class="lightbox-panel">
+      <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Close photo view">×</button>
+      <div class="lightbox-image-wrap" id="lightboxBackdrop">
+        <img class="lightbox-image" id="lightboxImage" src="" alt="">
+      </div>
+      <div class="lightbox-side">
+        <p class="lightbox-caption" id="lightboxCaption"></p>
+        <p class="lightbox-meta" id="lightboxMeta" hidden></p>
+        <a class="lightbox-link" id="lightboxLink" href="#" hidden>Open photo page →</a>
+        <button class="lightbox-share" id="lightboxShare" type="button" hidden>Share</button>
+        <p class="lightbox-status" id="lightboxStatus" role="status"></p>
+        <p class="lightbox-count" id="lightboxCount"></p>
+        <div class="lightbox-controls" aria-label="Photo navigation">
+          <button class="lightbox-control" id="lightboxPrevious" type="button" aria-label="Previous photo">←</button>
+          <button class="lightbox-control" id="lightboxNext" type="button" aria-label="Next photo">→</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/assets/app.js"></script>
+</body>
+</html>
