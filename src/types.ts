@@ -9,4 +9,6 @@ export type Photo = {
   sort_order?: number;
   width?: number | null;
   height?: number | null;
+  taken_at?: string | null;
+  location?: string | null;
 };

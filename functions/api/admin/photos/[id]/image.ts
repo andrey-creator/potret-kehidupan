@@ -1,5 +1,5 @@
 import { isAuthorized, json } from "../../../../_lib/auth";
-import { fileIdFromSrc, toBase64, toDimension, validateImage } from "../../../../_lib/images";
+import { batchWithThumbFallback, fileIdFromSrc, insertFile, readThumb, toBase64, toDimension, validateImage } from "../../../../_lib/images";
 
 type Env = {
   DB: D1Database;
@@ -31,14 +31,17 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     const fileId = crypto.randomUUID();
     const src = `/api/img/${fileId}`;
     const data = toBase64(await image.arrayBuffer());
-
-    const statements = [
-      env.DB.prepare("INSERT INTO photo_files (id, mime, data, size_bytes) VALUES (?, ?, ?, ?)").bind(fileId, image.type, data, image.size),
-      env.DB.prepare("UPDATE photos SET src = ?, width = ?, height = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(src, width, height, id)
-    ];
+    const thumb = await readThumb(form.get("thumb"));
     const oldFileId = fileIdFromSrc(row.src);
-    if (oldFileId) statements.push(env.DB.prepare("DELETE FROM photo_files WHERE id = ?").bind(oldFileId));
-    await env.DB.batch(statements);
+
+    await batchWithThumbFallback(env.DB, Boolean(thumb), (withThumb) => {
+      const statements = [
+        insertFile(env.DB, fileId, image.type, data, image.size, withThumb ? thumb : null),
+        env.DB.prepare("UPDATE photos SET src = ?, width = ?, height = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(src, width, height, id)
+      ];
+      if (oldFileId) statements.push(env.DB.prepare("DELETE FROM photo_files WHERE id = ?").bind(oldFileId));
+      return statements;
+    });
 
     return json({ src, message: "File foto diganti." });
   } catch (error) {

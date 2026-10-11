@@ -1,5 +1,5 @@
 import { isAuthorized, json } from "../../_lib/auth";
-import { toBase64, toDimension, validateImage } from "../../_lib/images";
+import { batchWithThumbFallback, insertFile, readThumb, toBase64, toDimension, validateImage } from "../../_lib/images";
 
 type PhotoSize = "regular" | "wide" | "tall";
 
@@ -29,10 +29,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const image = file as File;
     const id = crypto.randomUUID();
     const data = toBase64(await image.arrayBuffer());
+    const thumb = await readThumb(form.get("thumb"));
     const src = `/api/img/${id}`;
 
-    await env.DB.batch([
-      env.DB.prepare("INSERT INTO photo_files (id, mime, data, size_bytes) VALUES (?, ?, ?, ?)").bind(id, image.type, data, image.size),
+    await batchWithThumbFallback(env.DB, Boolean(thumb), (withThumb) => [
+      insertFile(env.DB, id, image.type, data, image.size, withThumb ? thumb : null),
       env.DB.prepare(
         "INSERT INTO photos (src, alt, caption, size, sort_order, width, height) VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM photos), ?, ?)"
       ).bind(src, alt, caption, size, width, height)

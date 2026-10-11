@@ -1,18 +1,18 @@
 # TODO — Potret Kehidupan
 
-- [x] Header tipis menampilkan judul **“Potret Kehidupan”** dan subjudul satu baris **“Kepingan hidup dalam gambar.”**.
-- [x] Galeri utama responsif bergaya masonry atau grid rapi berisi **12–20 foto** placeholder dari `picsum.photos`.
-- [x] Setiap foto memiliki caption satu baris dengan panjang maksimal **8 kata** yang tampil di bawah foto atau saat hover.
-- [x] Klik foto menampilkan **lightbox besar** lengkap dengan caption dan kontrol tutup yang mudah digunakan.
-- [x] Halaman responsif dan optimal untuk HP serta desktop, dengan banyak ruang kosong agar foto tetap menjadi fokus.
-- [x] Tersedia animasi halus saat elemen masuk ketika scroll dan efek hover dengan zoom lembut.
-- [x] Gambar menggunakan **lazy loading** untuk membantu performa pemuatan halaman.
-- [x] Footer minimal menampilkan nama, tahun, dan tautan media sosial opsional.
-- [x] Tampilan publik memakai Bootstrap sebagai fondasi, dengan CSS custom untuk menjaga gaya album.
-- [x] TypeScript dikompilasi melalui npm ke output `dist/` untuk deployment Cloudflare Pages.
-- [x] API JSON publik `/api/photos` membaca metadata galeri dari Cloudflare D1.
-- [x] API admin terproteksi token menyediakan tambah, ubah, dan hapus metadata foto.
-- [x] Endpoint upload terproteksi menyimpan foto asli ke Cloudflare R2 dan endpoint media menyajikannya.
-- [x] Migrasi SQL D1 dan seed 16 placeholder tersedia.
-- [x] Dokumentasi GitHub + Cloudflare Pages, binding D1/R2, secret, build, dan API tersedia di `README.md`.
-- [x] Seluruh implementasi publik tidak menambahkan artikel panjang, section tentang saya, dark mode, form publik, atau blog.
+## Sebelum dibagikan
+- [ ] Jalankan migrasi `0004` di Console D1, lalu klik **Buat thumbnail foto lama** di `/admin`.
+- [ ] Hapus semua foto placeholder dari `/admin` dan unggah foto asli.
+- [ ] Pilih foto unggulan (★) yang bagus untuk header dan pratinjau link.
+- [ ] Ganti teks pengantar di `public/index.html` (komentar `EDIT TEKS PENGANTAR DI SINI`).
+- [ ] Isi tanggal, lokasi, dan cerita singkat untuk foto-foto pilihan.
+- [ ] Uji pratinjau link di WhatsApp (halaman utama dan satu halaman `/foto/:id`).
+- [ ] Unduh cadangan (.zip) dari `/admin` secara berkala.
+
+## Opsional
+- [ ] Hapus link Bootstrap CDN dari `public/index.html` (tidak ada kelas Bootstrap yang dipakai), lalu cek tampilan di browser.
+- [ ] Kembalikan fokus ke foto yang diklik saat lightbox ditutup; dukungan geser di layar sentuh.
+- [ ] Fitur pulihkan (restore) dari file cadangan.
+- [ ] Seret dan lepas untuk mengatur urutan; pilih banyak foto sekaligus.
+- [ ] Lindungi `/admin` dan `/api/admin/*` dengan Cloudflare Access (butuh custom domain).
+- [ ] Jika galeri ramai: pindahkan penyimpanan foto ke R2 atau tambahkan cache.

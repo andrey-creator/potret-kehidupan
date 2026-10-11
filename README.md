@@ -23,9 +23,12 @@ functions/index.ts           # menyisipkan og:image dan canonical ke halaman uta
 functions/_lib/auth.ts       # cek token admin (constant-time) dan helper JSON
 functions/api/photos.ts      # GET foto publik
 functions/api/photos/[id].ts # GET satu foto published
-functions/api/img/[id].ts    # menyajikan file foto dari D1
+functions/api/img/[id].ts    # menyajikan file foto dari D1 (?s=thumb untuk versi kecil)
+functions/foto/[id].ts       # halaman tiap foto (/foto/:id), dirender di server
+functions/sitemap.xml.ts     # /sitemap.xml
+functions/robots.txt.ts      # /robots.txt
 functions/api/admin/*        # semua endpoint tulis (token admin)
-migrations/                  # 0001 tabel photos, 0002 photo_files, 0003 width/height
+migrations/                  # 0001 tabel photos, 0002 photo_files, 0003 width/height, 0004 thumbnail + tanggal/lokasi/cerita
 scripts/                     # build.mjs dan prune-dev.mjs
 wrangler.toml                # binding D1
 ```
@@ -33,7 +36,7 @@ wrangler.toml                # binding D1
 ## Setup Cloudflare (sekali saja)
 
 1. Buat database D1 `potret-kehidupan`, salin `database_id` ke `wrangler.toml`.
-2. Jalankan isi `migrations/0001_create_photos.sql`, `0002_photo_files.sql`, dan `0003_photo_dimensions.sql` secara berurutan (lewat Console D1 di dashboard atau `wrangler d1 migrations apply potret-kehidupan --remote`).
+2. Jalankan isi `migrations/0001_create_photos.sql`, `0002_photo_files.sql`, `0003_photo_dimensions.sql`, dan `0004_thumbs_and_story.sql` secara berurutan (satu pernyataan per eksekusi jika memakai Console) (lewat Console D1 di dashboard atau `wrangler d1 migrations apply potret-kehidupan --remote`).
 3. Buat project **Pages** (bukan Workers) dari repository GitHub: production branch `main`, build command `npm ci && npm run build`, output `dist`.
 4. Tambahkan secret `ADMIN_TOKEN` di Settings project. Buat dengan:
    ```bash
@@ -51,6 +54,9 @@ Update berikutnya cukup `git add .`, `git commit`, `git push`.
 - Foto dikecilkan otomatis di browser (sisi terpanjang 1600 px, sekitar 200–500 KB).
 - Foto pertama (urutan terkecil, ditandai ★) tampil di header dan menjadi `og:image` untuk pratinjau link.
 - Batas satu foto sekitar 1,3 MB setelah dikecilkan (batas baris D1 2 MB).
+- Upload dan ganti file otomatis membuat **thumbnail** 800 px untuk grid galeri. Untuk foto lama, klik **Buat thumbnail foto lama**.
+- **Edit** juga mengisi tanggal, lokasi, dan cerita singkat. Foto yang punya data itu menampilkannya di lightbox dan di halaman `/foto/:id`.
+- **Unduh cadangan (.zip)** berisi `photos.json` (semua metadata, termasuk foto tersembunyi dan cerita) dan semua file foto. Pemulihan belum otomatis: foto bisa diunggah ulang dari zip. Cadangan database penuh: `npx wrangler d1 export potret-kehidupan --remote --output cadangan.sql`.
 
 ## Endpoint API
 
@@ -59,18 +65,21 @@ Publik:
 ```text
 GET /api/photos          # foto yang published
 GET /api/photos/:id      # satu foto published
-GET /api/img/:id         # file foto dari D1
+GET /api/img/:id         # file foto dari D1 (tambahkan ?s=thumb untuk versi kecil)
+GET /foto/:id            # halaman foto (HTML)
+GET /sitemap.xml, /robots.txt
 ```
 
 Admin (semua butuh header `Authorization: Bearer <ADMIN_TOKEN>`):
 
 ```text
 POST   /api/admin/auth-check
-POST   /api/admin/photo-upload   # multipart: file, caption, alt, size, width, height
+POST   /api/admin/photo-upload   # multipart: file, caption, alt, size, width, height, thumb
 GET    /api/admin/photos         # daftar lengkap, termasuk foto tersembunyi
 POST   /api/admin/photos         # tambah metadata (src sudah ada)
-PUT    /api/admin/photos/:id     # ubah metadata / status terbit
-POST   /api/admin/photos/:id/image  # ganti file foto (multipart: file, width, height)
+PUT    /api/admin/photos/:id     # ubah metadata / status terbit (+ taken_at, location, story)
+POST   /api/admin/photos/:id/image  # ganti file foto (multipart: file, width, height, thumb)
+POST   /api/admin/photos/:id/thumb  # simpan thumbnail untuk foto yang sudah ada (multipart: thumb)
 POST   /api/admin/reorder        # simpan urutan: { "ids": [semua id foto, berurutan] }
 DELETE /api/admin/photos/:id     # hapus foto (dan filenya)
 ```

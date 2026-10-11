@@ -1,4 +1,5 @@
 import { isAuthorized, json } from "../../_lib/auth";
+import { ADMIN_COLUMN_SETS, queryWithFallback } from "../../_lib/photos";
 
 type PhotoSize = "regular" | "wide" | "tall";
 
@@ -23,18 +24,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   if (!(await isAuthorized(request, env.ADMIN_TOKEN))) return json({ error: "Unauthorized" }, 401);
   if (!env.DB) return json({ error: "D1 binding DB belum dikonfigurasi." }, 503);
   try {
-    try {
-      const { results } = await env.DB.prepare(
-        "SELECT id, src, alt, caption, size, sort_order, is_published, width, height FROM photos ORDER BY sort_order ASC, id ASC"
-      ).all();
-      return json(results);
-    } catch {
-      // Kolom width/height belum ada (migrasi 0003 belum dijalankan).
-      const { results } = await env.DB.prepare(
-        "SELECT id, src, alt, caption, size, sort_order, is_published FROM photos ORDER BY sort_order ASC, id ASC"
-      ).all();
-      return json(results);
-    }
+    const results = await queryWithFallback(ADMIN_COLUMN_SETS, (columns) => env.DB.prepare(
+      `SELECT ${columns} FROM photos ORDER BY sort_order ASC, id ASC`
+    ));
+    return json(results);
   } catch (error) {
     console.error("GET /api/admin/photos failed", error);
     return json({ error: "Gagal membaca daftar foto." }, 500);

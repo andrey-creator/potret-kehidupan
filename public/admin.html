@@ -81,6 +81,10 @@
     .tile .pair button { flex: 1; width: auto; border-top: 0; }
     .tile .pair button + button { border-left: 1px solid var(--line); }
     .modal-card input[type=file] { margin-bottom: 4px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+    .modal-card textarea { width: 100%; min-height: 110px; padding: 10px 12px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+    .modal-card input[type=date] { width: 100%; padding: 10px 12px; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+    .modal-card .fields-extra { margin-top: 4px; }
     [hidden] { display: none !important; }
   </style>
 </head>
@@ -119,6 +123,10 @@
     <section>
       <h2>Foto di galeri <span id="count" class="status"></span></h2>
       <p class="sub" style="margin:0 0 12px;font-size:.85rem">Foto pertama yang tampil (★) menjadi foto unggulan di header. Pakai ← Maju / Mundur → untuk mengatur urutan. Foto yang disembunyikan tidak tampil di situs, tetapi tidak dihapus.</p>
+      <div class="toolbar">
+        <button id="backupBtn" type="button">Unduh cadangan (.zip)</button>
+        <button id="thumbBtn" type="button" hidden>Buat thumbnail foto lama</button>
+      </div>
       <div id="gallery" class="grid"></div>
       <p id="galleryMsg" class="msg" role="status"></p>
     </section>
@@ -135,6 +143,15 @@
     <input id="editCaption" type="text" maxlength="120">
     <label for="editAlt">Deskripsi foto / alt (kosongkan untuk memakai caption)</label>
     <input id="editAlt" type="text">
+    <div id="editExtra" class="fields-extra" hidden>
+      <label for="editDate">Tanggal foto (opsional)</label>
+      <input id="editDate" type="date">
+      <label for="editLocation">Lokasi (opsional, maks. 80 karakter)</label>
+      <input id="editLocation" type="text" maxlength="80">
+      <label for="editStory">Cerita singkat (opsional, maks. 1200 karakter; baris kosong = paragraf baru)</label>
+      <textarea id="editStory" maxlength="1200"></textarea>
+    </div>
+    <p id="editExtraNote" class="status" hidden>Tanggal, lokasi, dan cerita butuh migrasi 0004 di D1.</p>
     <label for="editSize">Ukuran di galeri</label>
     <select id="editSize"></select>
     <p id="editMsg" class="msg" role="status"></p>
@@ -251,7 +268,7 @@
       tile.className = "tile" + (published ? "" : " is-hidden");
 
       var img = document.createElement("img");
-      img.src = p.src;
+      img.src = thumbSrc(p.src);
       img.alt = p.alt;
       img.loading = "lazy";
 
@@ -287,6 +304,18 @@
     });
 
     $("count").textContent = "(" + photos.length + (hiddenCount ? ", " + hiddenCount + " tersembunyi" : "") + ")";
+    var missing = photosNeedingThumb().length;
+    $("thumbBtn").hidden = missing === 0;
+    $("thumbBtn").textContent = "Buat thumbnail foto lama (" + missing + ")";
+  }
+
+  var D1_SRC = /^\/api\/img\/[0-9a-f-]{36}$/;
+
+  function thumbSrc(src) { return D1_SRC.test(src) ? src + "?s=thumb" : src; }
+
+  // Hanya foto di D1 yang bisa punya thumbnail. has_thumb dikirim server; jika kolomnya belum ada, tombol disembunyikan.
+  function photosNeedingThumb() {
+    return photos.filter(function (p) { return D1_SRC.test(p.src) && p.has_thumb === 0; });
   }
 
   function setTileButtons(disabled) {
@@ -316,6 +345,7 @@
       sort_order: typeof p.sort_order === "number" ? p.sort_order : 0,
       is_published: isPublished(p)
     };
+    ["taken_at", "location", "story"].forEach(function (k) { if (k in p) body[k] = p[k]; });
     Object.keys(overrides).forEach(function (k) { body[k] = overrides[k]; });
     var headers = authHeaders();
     headers["Content-Type"] = "application/json";
@@ -403,6 +433,12 @@
     $("editCaption").value = p.caption;
     $("editAlt").value = p.alt === p.caption ? "" : p.alt;
     buildSizeOptions(Boolean(p.width && p.height), p.size);
+    var hasExtra = "taken_at" in p;
+    $("editExtra").hidden = !hasExtra;
+    $("editExtraNote").hidden = hasExtra;
+    $("editDate").value = hasExtra && p.taken_at ? p.taken_at : "";
+    $("editLocation").value = hasExtra && p.location ? p.location : "";
+    $("editStory").value = hasExtra && p.story ? p.story : "";
     say($("editMsg"), "");
     $("editSave").disabled = false;
     $("editModal").hidden = false;
@@ -450,6 +486,7 @@
         form.append("file", shrunk.blob, "foto.jpg");
         form.append("width", String(shrunk.width));
         form.append("height", String(shrunk.height));
+        try { form.append("thumb", await makeThumb(editNewFile), "thumb.jpg"); } catch (e) { /* thumbnail opsional */ }
         say($("editMsg"), "Mengunggah file baru (" + Math.round(shrunk.blob.size / 1024) + " KB)…");
         var imageRes = await fetch("/api/admin/photos/" + p.id + "/image", { method: "POST", headers: authHeaders(), body: form });
         if (!imageRes.ok) throw new Error(await errorText(imageRes));
@@ -463,7 +500,13 @@
       var size = $("editSize").value;
       if (size === "auto") size = (width && height) ? autoSize(width, height) : p.size;
       say($("editMsg"), "Menyimpan…");
-      var res = await putPhoto(p, { src: src, alt: alt, caption: caption, size: size });
+      var changes = { src: src, alt: alt, caption: caption, size: size };
+      if ("taken_at" in p) {
+        changes.taken_at = $("editDate").value || null;
+        changes.location = $("editLocation").value.trim() || null;
+        changes.story = $("editStory").value.trim() || null;
+      }
+      var res = await putPhoto(p, changes);
       if (!res.ok) throw new Error(await errorText(res));
       closeEdit();
       await loadGallery();
@@ -511,6 +554,27 @@
     URL.revokeObjectURL(loaded.url);
     if (!blob || blob.size > MAX_BYTES) throw new Error("Foto masih terlalu besar setelah dikecilkan");
     return { blob: blob, width: canvas.width, height: canvas.height };
+  }
+
+  var THUMB_SIDE = 800;
+
+  // Versi kecil untuk grid galeri (sisi terpanjang 800 px).
+  async function makeThumb(source) {
+    var loaded = await loadImage(source);
+    var img = loaded.img;
+    var w = img.naturalWidth, h = img.naturalHeight;
+    var scale = Math.min(1, THUMB_SIDE / Math.max(w, h));
+    var canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(w * scale));
+    canvas.height = Math.max(1, Math.round(h * scale));
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    var blob = await canvasToBlob(canvas, 0.8);
+    URL.revokeObjectURL(loaded.url);
+    if (!blob) throw new Error("Thumbnail gagal dibuat");
+    return blob;
   }
 
   function autoSize(w, h) {
@@ -635,6 +699,7 @@
         form.append("alt", item.alt.trim());
         form.append("width", String(shrunk.width));
         form.append("height", String(shrunk.height));
+        try { form.append("thumb", await makeThumb(item.file), "thumb.jpg"); } catch (e) { /* thumbnail opsional */ }
         form.append("size", item.size === "auto" ? autoSize(shrunk.width, shrunk.height) : item.size);
         setStatus("Mengunggah (" + Math.round(shrunk.blob.size / 1024) + " KB)…");
         var res = await fetch("/api/admin/photo-upload", { method: "POST", headers: authHeaders(), body: form });
@@ -659,6 +724,133 @@
     setTimeout(function () { queue = queue.filter(function (q) { return !q.done; }); renderQueue(); }, 1200);
   }
 
+  // ---------- Thumbnail foto lama ----------
+  async function buildMissingThumbs() {
+    var todo = photosNeedingThumb();
+    if (!todo.length) return;
+    var btn = $("thumbBtn");
+    btn.disabled = true;
+    var done = 0, failed = 0;
+    for (var i = 0; i < todo.length; i++) {
+      var p = todo[i];
+      say($("galleryMsg"), "Membuat thumbnail " + (i + 1) + " dari " + todo.length + "…");
+      try {
+        var imageRes = await fetch(p.src);
+        if (!imageRes.ok) throw new Error("HTTP " + imageRes.status);
+        var thumb = await makeThumb(await imageRes.blob());
+        var form = new FormData();
+        form.append("thumb", thumb, "thumb.jpg");
+        var res = await fetch("/api/admin/photos/" + p.id + "/thumb", { method: "POST", headers: authHeaders(), body: form });
+        if (!res.ok) throw new Error(await errorText(res));
+        done++;
+      } catch (e) {
+        failed++;
+        say($("galleryMsg"), "Thumbnail untuk \"" + p.caption + "\" gagal: " + e.message, "err");
+        if (/migrasi/i.test(e.message)) break;
+      }
+    }
+    btn.disabled = false;
+    await loadGallery();
+    say($("galleryMsg"), done + " thumbnail dibuat" + (failed ? ", " + failed + " gagal." : "."), failed ? "err" : "ok");
+  }
+
+  // ---------- Cadangan (.zip tanpa kompresi, dibuat di browser) ----------
+  var crcTable = null;
+  function crc32(bytes) {
+    if (!crcTable) {
+      crcTable = [];
+      for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        crcTable[n] = c >>> 0;
+      }
+    }
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) crc = crcTable[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function makeZip(entries) {
+    var encoder = new TextEncoder();
+    var now = new Date();
+    var dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    var dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    var parts = [], central = [], offset = 0, centralSize = 0;
+    entries.forEach(function (entry) {
+      var name = encoder.encode(entry.name);
+      var crc = crc32(entry.data);
+      var size = entry.data.length;
+
+      var local = new DataView(new ArrayBuffer(30));
+      local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true);
+      local.setUint16(8, 0, true); local.setUint16(10, dosTime, true); local.setUint16(12, dosDate, true);
+      local.setUint32(14, crc, true); local.setUint32(18, size, true); local.setUint32(22, size, true);
+      local.setUint16(26, name.length, true); local.setUint16(28, 0, true);
+      parts.push(local.buffer, name, entry.data);
+
+      var head = new DataView(new ArrayBuffer(46));
+      head.setUint32(0, 0x02014b50, true); head.setUint16(4, 20, true); head.setUint16(6, 20, true);
+      head.setUint16(8, 0x0800, true); head.setUint16(10, 0, true); head.setUint16(12, dosTime, true);
+      head.setUint16(14, dosDate, true); head.setUint32(16, crc, true); head.setUint32(20, size, true);
+      head.setUint32(24, size, true); head.setUint16(28, name.length, true);
+      head.setUint32(42, offset, true);
+      central.push(head.buffer, name);
+      centralSize += 46 + name.length;
+      offset += 30 + name.length + size;
+    });
+    var end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true);
+    end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+    end.setUint32(12, centralSize, true); end.setUint32(16, offset, true);
+    return new Blob(parts.concat(central, [end.buffer]), { type: "application/zip" });
+  }
+
+  async function downloadBackup() {
+    var btn = $("backupBtn");
+    btn.disabled = true;
+    try {
+      say($("galleryMsg"), "Mengambil daftar foto…");
+      var res = await fetch("/api/admin/photos?_=" + Date.now(), { cache: "no-store", headers: authHeaders() });
+      if (!res.ok) throw new Error(await errorText(res));
+      var list = await res.json();
+      var entries = [], manifest = [], missing = 0;
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i];
+        say($("galleryMsg"), "Mengambil foto " + (i + 1) + " dari " + list.length + "…");
+        var file = null;
+        try {
+          var imageRes = await fetch(p.src);
+          if (!imageRes.ok) throw new Error("HTTP " + imageRes.status);
+          var blob = await imageRes.blob();
+          var ext = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg";
+          file = "images/" + String(i + 1).padStart(3, "0") + "-id" + p.id + "." + ext;
+          entries.push({ name: file, data: new Uint8Array(await blob.arrayBuffer()) });
+        } catch (e) {
+          missing++;
+        }
+        var record = {};
+        Object.keys(p).forEach(function (k) { if (k !== "has_thumb") record[k] = p[k]; });
+        record.file = file;
+        manifest.push(record);
+      }
+      var json = JSON.stringify({ exported_at: new Date().toISOString(), count: list.length, photos: manifest }, null, 2);
+      entries.unshift({ name: "photos.json", data: new TextEncoder().encode(json) });
+      var zip = makeZip(entries);
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(zip);
+      a.download = "potret-cadangan-" + new Date().toISOString().slice(0, 10) + ".zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+      say($("galleryMsg"), "Cadangan diunduh: " + (list.length - missing) + " foto" + (missing ? ", " + missing + " tidak bisa diambil (sumber luar)." : "."), missing ? "err" : "ok");
+    } catch (e) {
+      say($("galleryMsg"), "Cadangan gagal: " + e.message, "err");
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   // ---------- Wire up ----------
   $("loginBtn").addEventListener("click", function () {
     var value = $("token").value.trim();
@@ -671,6 +863,8 @@
   $("logoutBtn").addEventListener("click", logout);
   $("editSave").addEventListener("click", saveEdit);
   $("editFile").addEventListener("change", onEditFileChange);
+  $("backupBtn").addEventListener("click", downloadBackup);
+  $("thumbBtn").addEventListener("click", buildMissingThumbs);
   $("editCancel").addEventListener("click", closeEdit);
   $("editModal").addEventListener("click", function (e) { if (e.target === $("editModal")) closeEdit(); });
   $("editCaption").addEventListener("keydown", function (e) { if (e.key === "Enter") saveEdit(); });

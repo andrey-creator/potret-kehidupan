@@ -2,11 +2,11 @@
   "name": "potret-kehidupan",
   "version": "1.0.0",
   "private": true,
-  "description": "Galeri foto personal full-stack dengan Cloudflare Pages, D1, dan R2.",
+  "description": "Galeri foto personal full-stack dengan Cloudflare Pages dan D1.",
   "scripts": {
     "build": "node scripts/build.mjs && tsc && node scripts/prune-dev.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.functions.json --noEmit",
-    "dev": "wrangler pages dev dist --compatibility-date=2026-10-09 --port 3000"
+    "dev": "wrangler pages dev dist --compatibility-date=2026-10-09 --port 8788 --ip 127.0.0.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261008.1",

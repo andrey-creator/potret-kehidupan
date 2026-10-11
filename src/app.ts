@@ -10,6 +10,8 @@ const lightbox = document.querySelector<HTMLElement>("#lightbox");
 const lightboxImage = document.querySelector<HTMLImageElement>("#lightboxImage");
 const lightboxCaption = document.querySelector<HTMLElement>("#lightboxCaption");
 const lightboxCount = document.querySelector<HTMLElement>("#lightboxCount");
+const lightboxMeta = document.querySelector<HTMLElement>("#lightboxMeta");
+const lightboxLink = document.querySelector<HTMLAnchorElement>("#lightboxLink");
 const lightboxClose = document.querySelector<HTMLButtonElement>("#lightboxClose");
 const lightboxPrevious = document.querySelector<HTMLButtonElement>("#lightboxPrevious");
 const lightboxNext = document.querySelector<HTMLButtonElement>("#lightboxNext");
@@ -21,6 +23,19 @@ const padNumber = (number: number): string => String(number).padStart(2, "0");
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character] ?? character);
+}
+
+const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+function formatDate(iso: string | null | undefined): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? "");
+  const month = match ? MONTHS[Number(match[2]) - 1] : undefined;
+  return match && month ? `${Number(match[3])} ${month} ${match[1]}` : "";
+}
+
+// Foto yang disimpan di D1 punya versi kecil (?s=thumb) untuk grid; sumber lain dipakai apa adanya.
+function thumbSrc(src: string): string {
+  return /^\/api\/img\/[0-9a-f-]{36}$/.test(src) ? `${src}?s=thumb` : src;
 }
 
 function dimensions(item: Photo): { width: number; height: number } | null {
@@ -70,7 +85,7 @@ function renderGallery(): void {
     return `
     <article class="gallery-card is-${item.size}" data-index="${index}">
       <button class="photo-button" type="button" aria-label="Lihat foto: ${escapeHtml(item.caption)}" data-index="${index}">
-        <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt)}"${ratioStyle(item)} loading="${index < 2 ? "eager" : "lazy"}" decoding="async">
+        <img src="${escapeHtml(thumbSrc(item.src))}" alt="${escapeHtml(item.alt)}"${ratioStyle(item)} loading="${index < 2 ? "eager" : "lazy"}" decoding="async">
         <span class="photo-hint">Klik untuk melihat</span>
       </button>
       <div class="photo-caption">
@@ -103,6 +118,14 @@ function showLightbox(index: number): void {
   lightboxImage.alt = item.alt;
   lightboxCaption.textContent = item.caption;
   lightboxCount.textContent = `${padNumber(activeIndex + 1)} / ${padNumber(photos.length)}`;
+  if (lightboxMeta) {
+    lightboxMeta.textContent = [formatDate(item.taken_at), item.location?.trim() ?? ""].filter(Boolean).join(" · ");
+    lightboxMeta.hidden = !lightboxMeta.textContent;
+  }
+  if (lightboxLink) {
+    lightboxLink.hidden = !item.id;
+    if (item.id) lightboxLink.href = `/foto/${item.id}`;
+  }
   lightbox.hidden = false;
   document.body.classList.add("is-locked");
   lightboxClose.focus();
