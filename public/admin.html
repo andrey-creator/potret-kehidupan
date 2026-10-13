@@ -1,150 +1,207 @@
 <!doctype html>
-<html lang="id">
+<html lang="id" data-bs-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Admin — Potret Kehidupan</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script>
+    // Mode terang/gelap mengikuti pengaturan perangkat.
+    (function () {
+      var query = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+      function apply() { document.documentElement.setAttribute("data-bs-theme", query && query.matches ? "dark" : "light"); }
+      apply();
+      if (query && query.addEventListener) query.addEventListener("change", apply);
+    })();
+  </script>
+  <link rel="stylesheet" href="/assets/vendor/bootstrap.min.css">
   <style>
-    :root {
-      --bg: #f1eee8; --card: #ffffff; --text: #1f1d1a; --muted: #6b665e;
-      --line: #ded9cf; --accent: #2f4f3e; --accent-text: #ffffff; --danger: #a63a2b;
-      --ok: #2f6b45;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #171614; --card: #211f1c; --text: #f0ece4; --muted: #a39d92;
-        --line: #38352f; --accent: #8fbfa3; --accent-text: #11140f; --danger: #e58a7a;
-        --ok: #8fd1a5;
-      }
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: var(--bg); color: var(--text);
-      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    }
-    main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
-    h1 { font-size: 1.5rem; margin: 0 0 4px; }
-    h2 { font-size: 1.1rem; margin: 0 0 12px; }
-    p.sub { margin: 0 0 24px; color: var(--muted); }
-    section {
-      background: var(--card); border: 1px solid var(--line);
-      border-radius: 12px; padding: 16px; margin-bottom: 20px;
-    }
-    label { display: block; font-size: .875rem; color: var(--muted); margin-bottom: 4px; }
-    input[type=text], input[type=password], select {
-      width: 100%; padding: 10px 12px; font: inherit; color: var(--text);
-      background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
-    }
-    input[type=file] { width: 100%; font: inherit; color: var(--text); }
-    button {
-      font: inherit; cursor: pointer; padding: 10px 16px; border-radius: 8px;
-      border: 1px solid var(--line); background: var(--card); color: var(--text);
-    }
-    button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-    button.danger { color: var(--danger); }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
-    .row > * { flex: 1 1 200px; }
-    .row > button { flex: 0 0 auto; }
-    .check { display: flex; align-items: center; gap: 8px; margin-top: 10px; color: var(--muted); font-size: .875rem; }
-    .check input { width: auto; }
-    .msg { margin: 10px 0 0; font-size: .9rem; min-height: 1.2em; }
-    .msg.err { color: var(--danger); }
-    .msg.ok { color: var(--ok); }
-    .item {
-      display: grid; grid-template-columns: 96px 1fr; gap: 12px;
-      padding: 12px 0; border-top: 1px solid var(--line);
-    }
-    .item:first-child { border-top: 0; }
-    .item img { width: 96px; height: 96px; object-fit: contain; border-radius: 8px; background: var(--line); }
-    .fields { display: grid; gap: 8px; grid-template-columns: 1fr 120px; }
-    .fields .full { grid-column: 1 / -1; }
-    .status { font-size: .85rem; color: var(--muted); }
-    .status.err { color: var(--danger); }
-    .status.ok { color: var(--ok); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-    .tile { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
-    .tile img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--line); }
-    .tile .meta { padding: 8px; font-size: .8rem; }
-    .tile .meta strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .tile .meta span { color: var(--muted); }
-    .tile button { display: block; width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 8px; font-size: .85rem; }
-    .modal { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; overflow-y: auto; background: rgba(0, 0, 0, .55); }
-    .modal-card { width: min(100%, 520px); padding: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
-    .modal-card img { display: block; width: 100%; max-height: 220px; margin-bottom: 12px; object-fit: contain; background: var(--line); border-radius: 8px; }
-    .modal-card label { margin-top: 10px; }
-    .modal-card .row { margin-top: 14px; }
     .tile.is-hidden { border-style: dashed; }
-    .tile.is-hidden img { opacity: .4; }
-    .tile .pair { display: flex; border-top: 1px solid var(--line); }
-    .tile .pair button { flex: 1; width: auto; border-top: 0; }
-    .tile .pair button + button { border-left: 1px solid var(--line); }
-    .modal-card input[type=file] { margin-bottom: 4px; }
-    [hidden] { display: none !important; }
+    .queue-thumb { width: 72px; height: 72px; object-fit: contain; }
+    #editPreview { max-height: 240px; object-fit: contain; }
+    #editStory, #editStoryEn { min-height: 120px; }
   </style>
 </head>
-<body>
-<main>
-  <h1>Admin Potret Kehidupan</h1>
-  <p class="sub">Tambah dan hapus foto galeri.</p>
-
-  <section id="login">
-    <h2>Masuk</h2>
-    <div class="row">
-      <div>
-        <label for="token">Token admin (ADMIN_TOKEN)</label>
-        <input id="token" type="password" autocomplete="off" placeholder="Tempel token di sini">
-      </div>
-      <button id="loginBtn" class="primary" type="button">Masuk</button>
+<body class="bg-body-tertiary">
+<nav class="navbar bg-body border-bottom">
+  <div class="container">
+    <span class="navbar-brand mb-0 fs-5">Admin <span class="text-body-secondary fw-normal">· Potret Kehidupan</span></span>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary btn-sm" href="/" target="_blank" rel="noopener">Lihat situs</a>
+      <button id="logoutBtn" class="btn btn-outline-secondary btn-sm" type="button" hidden>Keluar</button>
     </div>
-    <label class="check"><input id="remember" type="checkbox"> Ingat token di browser ini (jangan dicentang di komputer umum)</label>
-    <p id="loginMsg" class="msg" role="status"></p>
+  </div>
+</nav>
+
+<main class="container py-4">
+  <section id="login" class="card shadow-sm mx-auto" style="max-width: 440px">
+    <div class="card-body">
+      <h1 class="h5 card-title">Masuk</h1>
+      <label for="token" class="form-label">Token admin (ADMIN_TOKEN)</label>
+      <input id="token" type="password" class="form-control" autocomplete="off" placeholder="Tempel token di sini">
+      <div class="form-check mt-2">
+        <input id="remember" class="form-check-input" type="checkbox">
+        <label class="form-check-label small text-body-secondary" for="remember">Ingat token di browser ini (jangan dicentang di komputer umum)</label>
+      </div>
+      <button id="loginBtn" class="btn btn-primary w-100 mt-3" type="button">Masuk</button>
+      <div id="loginMsg" class="d-none" role="status"></div>
+    </div>
   </section>
 
   <div id="panel" hidden>
-    <section>
-      <h2>Upload foto</h2>
-      <label for="files">Pilih satu atau beberapa foto (JPEG, PNG, WebP)</label>
-      <input id="files" type="file" accept="image/jpeg,image/png,image/webp" multiple>
-      <p class="sub" style="margin:8px 0 0;font-size:.85rem">Foto otomatis dikecilkan di browser (sisi terpanjang 1600 px) sebelum diunggah.</p>
-      <div id="queue"></div>
-      <div class="row" style="margin-top:12px">
-        <button id="uploadBtn" class="primary" type="button" disabled>Upload semua</button>
-        <button id="logoutBtn" type="button">Keluar</button>
+    <section class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h5">Upload foto</h2>
+        <label for="files" class="form-label">Pilih satu atau beberapa foto (JPEG, PNG, WebP)</label>
+        <input id="files" class="form-control" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+        <div class="form-text">Foto otomatis dikecilkan di browser (sisi terpanjang 1600 px) sebelum diunggah. Terjemahan Inggris, tanggal, lokasi, dan cerita diisi lewat tombol Edit setelah upload.</div>
+        <div id="queue" class="mt-3"></div>
+        <div id="uploadProgressWrap" class="progress mt-3" role="progressbar" aria-label="Kemajuan upload" aria-valuemin="0" aria-valuemax="100" hidden>
+          <div id="uploadProgress" class="progress-bar" style="width: 0%"></div>
+        </div>
+        <button id="uploadBtn" class="btn btn-primary mt-3" type="button" disabled>Upload semua</button>
+        <div id="uploadMsg" class="d-none" role="status"></div>
       </div>
-      <p id="uploadMsg" class="msg" role="status"></p>
     </section>
 
-    <section>
-      <h2>Foto di galeri <span id="count" class="status"></span></h2>
-      <p class="sub" style="margin:0 0 12px;font-size:.85rem">Foto pertama yang tampil (★) menjadi foto unggulan di header. Pakai ← Maju / Mundur → untuk mengatur urutan. Foto yang disembunyikan tidak tampil di situs, tetapi tidak dihapus.</p>
-      <div id="gallery" class="grid"></div>
-      <p id="galleryMsg" class="msg" role="status"></p>
+    <section class="card shadow-sm mb-4" id="introCard">
+      <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <h2 class="h5 mb-0">Teks halaman awal</h2>
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#introBody" aria-expanded="false" aria-controls="introBody">Ubah</button>
+        </div>
+        <p class="small text-body-secondary mb-0 mt-1">Kalimat pembuka dan paragraf pengantar di bagian atas halaman utama, dalam bahasa Indonesia dan English.</p>
+        <div class="collapse" id="introBody">
+          <div class="row g-3 mt-1">
+            <div class="col-md-6">
+              <h3 class="h6">Bahasa Indonesia</h3>
+              <label for="noteId" class="form-label small">Kalimat pembuka (maks. 120 karakter)</label>
+              <input id="noteId" type="text" class="form-control" maxlength="120">
+              <div class="form-text text-end mt-1" id="noteIdCount"></div>
+              <label for="ledeId" class="form-label small mt-2">Paragraf pengantar (maks. 600 karakter)</label>
+              <textarea id="ledeId" class="form-control" rows="5" maxlength="600"></textarea>
+              <div class="form-text text-end mt-1" id="ledeIdCount"></div>
+            </div>
+            <div class="col-md-6">
+              <h3 class="h6">English</h3>
+              <label for="noteEn" class="form-label small">Opening line (max. 120 characters)</label>
+              <input id="noteEn" type="text" class="form-control" maxlength="120">
+              <div class="form-text text-end mt-1" id="noteEnCount"></div>
+              <label for="ledeEn" class="form-label small mt-2">Intro paragraph (max. 600 characters)</label>
+              <textarea id="ledeEn" class="form-control" rows="5" maxlength="600"></textarea>
+              <div class="form-text text-end mt-1" id="ledeEnCount"></div>
+            </div>
+          </div>
+          <p id="introNote" class="form-text mb-0" hidden>Fitur ini butuh migrasi 0007 di D1.</p>
+          <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+            <button id="introSave" class="btn btn-primary btn-sm" type="button">Simpan teks</button>
+            <button id="introReset" class="btn btn-outline-secondary btn-sm" type="button">Pakai teks bawaan</button>
+            <a class="btn btn-link btn-sm" href="/" target="_blank" rel="noopener">Lihat halaman (ID)</a>
+            <a class="btn btn-link btn-sm" href="/en/" target="_blank" rel="noopener">View page (EN)</a>
+          </div>
+          <div id="introMsg" class="d-none" role="status"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+          <h2 class="h5 mb-0">Foto di galeri <span id="count" class="badge text-bg-secondary fw-normal"></span></h2>
+          <div class="d-flex flex-wrap gap-2">
+            <button id="thumbBtn" class="btn btn-outline-secondary btn-sm" type="button" hidden title="Membuat thumbnail dan pratinjau buram untuk foto lama">Siapkan foto lama</button>
+            <button id="backupBtn" class="btn btn-outline-secondary btn-sm" type="button">Unduh cadangan (.zip)</button>
+          </div>
+        </div>
+        <p class="small text-body-secondary mb-3">Foto pertama yang tampil (★) menjadi foto unggulan di header. Pakai ← Maju / Mundur → untuk mengatur urutan. Foto yang disembunyikan tidak tampil di situs, tetapi tidak dihapus.</p>
+        <div id="galleryProgressWrap" class="progress mb-3" role="progressbar" aria-label="Kemajuan proses" aria-valuemin="0" aria-valuemax="100" hidden>
+          <div id="galleryProgress" class="progress-bar" style="width: 0%"></div>
+        </div>
+        <div id="gallery" class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3"></div>
+        <div id="galleryMsg" class="d-none" role="status"></div>
+      </div>
     </section>
   </div>
 </main>
 
-<div id="editModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editTitle" hidden>
-  <div class="modal-card">
-    <h2 id="editTitle">Edit foto</h2>
-    <img id="editPreview" alt="">
-    <label for="editFile">Ganti file foto (opsional; kosongkan jika tidak diganti)</label>
-    <input id="editFile" type="file" accept="image/jpeg,image/png,image/webp">
-    <label for="editCaption">Caption (wajib, maks. 120 karakter)</label>
-    <input id="editCaption" type="text" maxlength="120">
-    <label for="editAlt">Deskripsi foto / alt (kosongkan untuk memakai caption)</label>
-    <input id="editAlt" type="text">
-    <label for="editSize">Ukuran di galeri</label>
-    <select id="editSize"></select>
-    <p id="editMsg" class="msg" role="status"></p>
-    <div class="row">
-      <button id="editSave" class="primary" type="button">Simpan</button>
-      <button id="editCancel" type="button">Batal</button>
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5" id="editTitle">Edit foto</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <img id="editPreview" class="img-fluid w-100 rounded border bg-body-secondary" alt="">
+            <label for="editFile" class="form-label small mt-2">Ganti file foto (opsional)</label>
+            <input id="editFile" type="file" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp">
+          </div>
+          <div class="col-md-8">
+            <ul class="nav nav-tabs" role="tablist">
+              <li class="nav-item" role="presentation"><button class="nav-link active" id="editTabIdBtn" data-bs-toggle="tab" data-bs-target="#editTabId" type="button" role="tab">Bahasa Indonesia</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" id="editTabEnBtn" data-bs-toggle="tab" data-bs-target="#editTabEn" type="button" role="tab">English</button></li>
+            </ul>
+            <div class="tab-content pt-3">
+              <div class="tab-pane fade show active" id="editTabId" role="tabpanel">
+                <label for="editCaption" class="form-label">Caption (wajib, maks. 120 karakter)</label>
+                <input id="editCaption" type="text" class="form-control" maxlength="120">
+                <div class="form-text text-end mt-1" id="editCaptionCount"></div>
+                <label for="editAlt" class="form-label mt-2">Deskripsi foto / alt (kosongkan untuk memakai caption)</label>
+                <input id="editAlt" type="text" class="form-control">
+                <div id="editExtra" hidden>
+                  <div class="row g-2 mt-0">
+                    <div class="col-sm-5">
+                      <label for="editDate" class="form-label mt-2">Tanggal foto (opsional)</label>
+                      <input id="editDate" type="date" class="form-control">
+                    </div>
+                    <div class="col-sm-7">
+                      <label for="editLocation" class="form-label mt-2">Lokasi (opsional, maks. 80 karakter)</label>
+                      <input id="editLocation" type="text" class="form-control" maxlength="80">
+                <div class="form-text text-end mt-1" id="editLocationCount"></div>
+                    </div>
+                  </div>
+                  <label for="editStory" class="form-label mt-2">Cerita singkat (opsional, maks. 1200 karakter; baris kosong = paragraf baru)</label>
+                  <textarea id="editStory" class="form-control" maxlength="1200"></textarea>
+                <div class="form-text text-end mt-1" id="editStoryCount"></div>
+                </div>
+                <p id="editExtraNote" class="form-text" hidden>Tanggal, lokasi, dan cerita butuh migrasi 0004 di D1.</p>
+                <label for="editSize" class="form-label mt-2">Ukuran di galeri</label>
+                <select id="editSize" class="form-select"></select>
+              </div>
+              <div class="tab-pane fade" id="editTabEn" role="tabpanel">
+                <div id="editEnglish" hidden>
+                  <p class="form-text mt-0">Semua isian opsional. Yang dikosongkan memakai teks Indonesia di versi English.</p>
+                  <label for="editCaptionEn" class="form-label">Caption (max. 120 characters)</label>
+                  <input id="editCaptionEn" type="text" class="form-control" maxlength="120">
+                <div class="form-text text-end mt-1" id="editCaptionEnCount"></div>
+                  <label for="editAltEn" class="form-label mt-2">Photo description / alt</label>
+                  <input id="editAltEn" type="text" class="form-control">
+                  <label for="editLocationEn" class="form-label mt-2">Location (max. 80 characters)</label>
+                  <input id="editLocationEn" type="text" class="form-control" maxlength="80">
+                <div class="form-text text-end mt-1" id="editLocationEnCount"></div>
+                  <label for="editStoryEn" class="form-label mt-2">Short story (max. 1200 characters; blank line = new paragraph)</label>
+                  <textarea id="editStoryEn" class="form-control" maxlength="1200"></textarea>
+                <div class="form-text text-end mt-1" id="editStoryEnCount"></div>
+                </div>
+                <p id="editEnglishNote" class="form-text" hidden>Versi English butuh migrasi 0005 di D1.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="editMsg" class="d-none" role="status"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="editCancel" type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+        <button id="editSave" type="button" class="btn btn-primary">Simpan</button>
+      </div>
     </div>
   </div>
 </div>
 
+<script src="/assets/vendor/bootstrap.bundle.min.js"></script>
 <script>
 (function () {
   "use strict";
@@ -161,9 +218,21 @@
   function safeSet(v) { try { localStorage.setItem(STORE_KEY, v); } catch (e) {} }
   function safeDel() { try { localStorage.removeItem(STORE_KEY); } catch (e) {} }
 
+  // Pesan status memakai komponen alert Bootstrap; kosong = disembunyikan.
   function say(el, text, kind) {
     el.textContent = text || "";
-    el.className = "msg" + (kind ? " " + kind : "");
+    var tone = kind === "err" ? "danger" : kind === "ok" ? "success" : "secondary";
+    el.className = text ? "alert alert-" + tone + " py-2 px-3 mt-3 mb-0 small" : "d-none";
+  }
+
+  function setProgress(prefix, done, total) {
+    var wrap = $(prefix + "Wrap"), bar = $(prefix);
+    if (!total) { wrap.hidden = true; return; }
+    var pct = Math.round(done / total * 100);
+    wrap.hidden = false;
+    bar.style.width = pct + "%";
+    bar.textContent = pct + "%";
+    wrap.setAttribute("aria-valuenow", String(pct));
   }
 
   function authHeaders() { return { Authorization: "Bearer " + token }; }
@@ -186,7 +255,9 @@
     if (remember) safeSet(candidate); else safeDel();
     $("login").hidden = true;
     $("panel").hidden = false;
+    $("logoutBtn").hidden = false;
     loadGallery();
+    loadIntro();
     return true;
   }
 
@@ -195,6 +266,7 @@
     safeDel();
     $("token").value = "";
     $("panel").hidden = true;
+    $("logoutBtn").hidden = true;
     $("login").hidden = false;
     say($("loginMsg"), "");
   }
@@ -232,9 +304,27 @@
     var b = document.createElement("button");
     b.type = "button";
     b.textContent = label;
-    if (className) b.className = className;
+    b.className = className || "btn btn-outline-secondary btn-sm";
     b.addEventListener("click", onClick);
     return b;
+  }
+
+  function badge(text, tone) {
+    var b = document.createElement("span");
+    b.className = "badge text-bg-" + tone + " me-1";
+    b.textContent = text;
+    return b;
+  }
+
+  function menuItem(label, onClick, danger) {
+    var li = document.createElement("li");
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "dropdown-item" + (danger ? " text-danger" : "");
+    b.textContent = label;
+    b.addEventListener("click", onClick);
+    li.appendChild(b);
+    return li;
   }
 
   function renderGallery() {
@@ -247,46 +337,97 @@
       var published = isPublished(p);
       if (!published) hiddenCount++;
 
+      var col = document.createElement("div");
+      col.className = "col";
       var tile = document.createElement("div");
-      tile.className = "tile" + (published ? "" : " is-hidden");
+      tile.className = "card h-100 tile" + (published ? "" : " is-hidden bg-body-secondary");
 
+      var frame = document.createElement("div");
+      frame.className = "ratio ratio-1x1 bg-body-secondary rounded-top overflow-hidden";
       var img = document.createElement("img");
-      img.src = p.src;
+      img.src = thumbSrc(p.src);
       img.alt = p.alt;
       img.loading = "lazy";
+      img.className = "object-fit-contain" + (published ? "" : " opacity-50");
+      frame.appendChild(img);
 
-      var meta = document.createElement("div");
-      meta.className = "meta";
+      var body = document.createElement("div");
+      body.className = "card-body p-2";
       var cap = document.createElement("strong");
+      cap.className = "d-block text-truncate";
+      cap.title = p.caption;
       cap.textContent = p.caption;
-      var info = document.createElement("span");
-      info.textContent = (i === featuredIndex ? "★ Unggulan · " : "") + (published ? "" : "Tersembunyi · ") +
-        "#" + (i + 1) + " · ID " + p.id + " · " + p.size;
-      meta.appendChild(cap);
-      meta.appendChild(info);
+      var badges = document.createElement("div");
+      badges.className = "mt-1";
+      if (i === featuredIndex) badges.appendChild(badge("★ Unggulan", "success"));
+      if (!published) badges.appendChild(badge("Tersembunyi", "secondary"));
+      if (p.caption_en) badges.appendChild(badge("EN", "info"));
+      var info = document.createElement("small");
+      info.className = "text-body-secondary";
+      info.textContent = "#" + (i + 1) + " · ID " + p.id + " · " + p.size;
+      body.appendChild(cap);
+      body.appendChild(badges);
+      body.appendChild(info);
 
-      var pair = document.createElement("div");
-      pair.className = "pair";
-      var earlier = makeButton("← Maju", function () { movePhoto(i, -1); });
-      var later = makeButton("Mundur →", function () { movePhoto(i, 1); });
+      var footer = document.createElement("div");
+      footer.className = "card-footer bg-transparent p-2";
+      var move = document.createElement("div");
+      move.className = "btn-group btn-group-sm w-100";
+      move.setAttribute("role", "group");
+      var earlier = makeButton("← Maju", function () { movePhoto(i, -1); }, "btn btn-outline-secondary");
+      var later = makeButton("Mundur →", function () { movePhoto(i, 1); }, "btn btn-outline-secondary");
       if (i === 0) { earlier.disabled = true; earlier.setAttribute("data-edge", ""); }
       if (i === photos.length - 1) { later.disabled = true; later.setAttribute("data-edge", ""); }
-      pair.appendChild(earlier);
-      pair.appendChild(later);
+      move.appendChild(earlier);
+      move.appendChild(later);
 
-      tile.appendChild(img);
-      tile.appendChild(meta);
-      tile.appendChild(pair);
-      tile.appendChild(makeButton("Edit", function () { openEdit(p); }));
-      if (published && i !== featuredIndex) {
-        tile.appendChild(makeButton("Jadikan unggulan", function () { makeFeatured(p); }));
-      }
-      tile.appendChild(makeButton(published ? "Sembunyikan" : "Tampilkan", function () { toggleHidden(p); }));
-      tile.appendChild(makeButton("Hapus", function () { removePhoto(p); }, "danger"));
-      box.appendChild(tile);
+      var actions = document.createElement("div");
+      actions.className = "d-grid gap-1 mt-1";
+      actions.appendChild(makeButton("Edit", function () { openEdit(p); }, "btn btn-outline-primary btn-sm"));
+
+      var dropdown = document.createElement("div");
+      dropdown.className = "dropdown d-grid";
+      var toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "btn btn-outline-secondary btn-sm dropdown-toggle";
+      toggle.setAttribute("data-bs-toggle", "dropdown");
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.textContent = "Lainnya";
+      var menu = document.createElement("ul");
+      menu.className = "dropdown-menu";
+      if (published && i !== featuredIndex) menu.appendChild(menuItem("Jadikan unggulan", function () { makeFeatured(p); }));
+      menu.appendChild(menuItem(published ? "Sembunyikan" : "Tampilkan", function () { toggleHidden(p); }));
+      var divider = document.createElement("li");
+      divider.innerHTML = '<hr class="dropdown-divider">';
+      menu.appendChild(divider);
+      menu.appendChild(menuItem("Hapus", function () { removePhoto(p); }, true));
+      dropdown.appendChild(toggle);
+      dropdown.appendChild(menu);
+      actions.appendChild(dropdown);
+
+      footer.appendChild(move);
+      footer.appendChild(actions);
+      tile.appendChild(frame);
+      tile.appendChild(body);
+      tile.appendChild(footer);
+      col.appendChild(tile);
+      box.appendChild(col);
     });
 
-    $("count").textContent = "(" + photos.length + (hiddenCount ? ", " + hiddenCount + " tersembunyi" : "") + ")";
+    $("count").textContent = photos.length + (hiddenCount ? " · " + hiddenCount + " tersembunyi" : "");
+    var missing = photosNeedingPrep().length;
+    $("thumbBtn").hidden = missing === 0;
+    $("thumbBtn").textContent = "Siapkan foto lama (" + missing + ")";
+  }
+
+  var D1_SRC = /^\/api\/img\/[0-9a-f-]{36}$/;
+
+  function thumbSrc(src) { return D1_SRC.test(src) ? src + "?s=thumb" : src; }
+
+  // Foto lama di D1 yang belum punya thumbnail (has_thumb) atau pratinjau buram (has_blur).
+  // Jika kolomnya belum ada di database, penanda ini tidak dikirim server dan foto itu dilewati.
+  function photosNeedingPrep() {
+    return photos.filter(function (p) { return D1_SRC.test(p.src) && (p.has_thumb === 0 || p.has_blur === 0); });
   }
 
   function setTileButtons(disabled) {
@@ -316,6 +457,7 @@
       sort_order: typeof p.sort_order === "number" ? p.sort_order : 0,
       is_published: isPublished(p)
     };
+    ["taken_at", "location", "story", "caption_en", "alt_en", "location_en", "story_en"].forEach(function (k) { if (k in p) body[k] = p[k]; });
     Object.keys(overrides).forEach(function (k) { body[k] = overrides[k]; });
     var headers = authHeaders();
     headers["Content-Type"] = "application/json";
@@ -373,6 +515,12 @@
   var editing = null;
   var editNewFile = null;
   var editPreviewUrl = "";
+  var editModal = null;
+
+  function modal() {
+    if (!editModal) editModal = bootstrap.Modal.getOrCreateInstance($("editModal"));
+    return editModal;
+  }
 
   function buildSizeOptions(allowAuto, selected) {
     var select = $("editSize");
@@ -403,16 +551,31 @@
     $("editCaption").value = p.caption;
     $("editAlt").value = p.alt === p.caption ? "" : p.alt;
     buildSizeOptions(Boolean(p.width && p.height), p.size);
+
+    var hasExtra = "taken_at" in p;
+    $("editExtra").hidden = !hasExtra;
+    $("editExtraNote").hidden = hasExtra;
+    $("editDate").value = hasExtra && p.taken_at ? p.taken_at : "";
+    $("editLocation").value = hasExtra && p.location ? p.location : "";
+    $("editStory").value = hasExtra && p.story ? p.story : "";
+
+    var hasEnglish = "caption_en" in p;
+    $("editEnglish").hidden = !hasEnglish;
+    $("editEnglishNote").hidden = hasEnglish;
+    $("editCaptionEn").value = hasEnglish && p.caption_en ? p.caption_en : "";
+    $("editAltEn").value = hasEnglish && p.alt_en ? p.alt_en : "";
+    $("editLocationEn").value = hasEnglish && p.location_en ? p.location_en : "";
+    $("editStoryEn").value = hasEnglish && p.story_en ? p.story_en : "";
+
+    refreshCounters();
     say($("editMsg"), "");
     $("editSave").disabled = false;
-    $("editModal").hidden = false;
-    $("editCaption").focus();
+    bootstrap.Tab.getOrCreateInstance($("editTabIdBtn")).show();
+    modal().show();
   }
 
   function closeEdit() {
-    resetEditFile();
-    $("editModal").hidden = true;
-    editing = null;
+    modal().hide();
   }
 
   function onEditFileChange() {
@@ -450,6 +613,8 @@
         form.append("file", shrunk.blob, "foto.jpg");
         form.append("width", String(shrunk.width));
         form.append("height", String(shrunk.height));
+        try { form.append("thumb", await makeThumb(editNewFile), "thumb.jpg"); } catch (e) { /* thumbnail opsional */ }
+        try { form.append("blur", await makeBlur(editNewFile)); } catch (e) { /* pratinjau buram opsional */ }
         say($("editMsg"), "Mengunggah file baru (" + Math.round(shrunk.blob.size / 1024) + " KB)…");
         var imageRes = await fetch("/api/admin/photos/" + p.id + "/image", { method: "POST", headers: authHeaders(), body: form });
         if (!imageRes.ok) throw new Error(await errorText(imageRes));
@@ -463,7 +628,19 @@
       var size = $("editSize").value;
       if (size === "auto") size = (width && height) ? autoSize(width, height) : p.size;
       say($("editMsg"), "Menyimpan…");
-      var res = await putPhoto(p, { src: src, alt: alt, caption: caption, size: size });
+      var changes = { src: src, alt: alt, caption: caption, size: size };
+      if ("taken_at" in p) {
+        changes.taken_at = $("editDate").value || null;
+        changes.location = $("editLocation").value.trim() || null;
+        changes.story = $("editStory").value.trim() || null;
+      }
+      if ("caption_en" in p) {
+        changes.caption_en = $("editCaptionEn").value.trim() || null;
+        changes.alt_en = $("editAltEn").value.trim() || null;
+        changes.location_en = $("editLocationEn").value.trim() || null;
+        changes.story_en = $("editStoryEn").value.trim() || null;
+      }
+      var res = await putPhoto(p, changes);
       if (!res.ok) throw new Error(await errorText(res));
       closeEdit();
       await loadGallery();
@@ -513,6 +690,46 @@
     return { blob: blob, width: canvas.width, height: canvas.height };
   }
 
+  var THUMB_SIDE = 800;
+
+  // Versi kecil untuk grid galeri (sisi terpanjang 800 px).
+  async function makeThumb(source) {
+    var loaded = await loadImage(source);
+    var img = loaded.img;
+    var w = img.naturalWidth, h = img.naturalHeight;
+    var scale = Math.min(1, THUMB_SIDE / Math.max(w, h));
+    var canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(w * scale));
+    canvas.height = Math.max(1, Math.round(h * scale));
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    var blob = await canvasToBlob(canvas, 0.8);
+    URL.revokeObjectURL(loaded.url);
+    if (!blob) throw new Error("Thumbnail gagal dibuat");
+    return blob;
+  }
+
+  // Pratinjau buram: gambar mungil (sisi terpanjang 20 px) sebagai data URI JPEG, tampil sebelum foto selesai dimuat.
+  async function makeBlur(source) {
+    var loaded = await loadImage(source);
+    var img = loaded.img;
+    var w = img.naturalWidth, h = img.naturalHeight;
+    var scale = Math.min(1, 20 / Math.max(w, h));
+    var canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(w * scale));
+    canvas.height = Math.max(1, Math.round(h * scale));
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    var dataUrl = canvas.toDataURL("image/jpeg", 0.5);
+    URL.revokeObjectURL(loaded.url);
+    if (!/^data:image\/jpeg;base64,/.test(dataUrl)) throw new Error("Pratinjau buram gagal dibuat");
+    return dataUrl;
+  }
+
   function autoSize(w, h) {
     var ratio = w / h;
     if (ratio >= 1.3) return "wide";
@@ -521,36 +738,50 @@
   }
 
   // ---------- Queue ----------
+  function field(labelText, control, colClass) {
+    var wrap = document.createElement("div");
+    wrap.className = colClass;
+    var label = document.createElement("label");
+    label.className = "form-label small mb-1";
+    label.textContent = labelText;
+    wrap.appendChild(label);
+    wrap.appendChild(control);
+    return wrap;
+  }
+
   function renderQueue() {
     var box = $("queue");
     box.textContent = "";
     queue.forEach(function (item) {
+      var card = document.createElement("div");
+      card.className = "card mb-2 queue-item";
+      var inner = document.createElement("div");
+      inner.className = "card-body p-2";
       var row = document.createElement("div");
-      row.className = "item";
+      row.className = "row g-2";
 
+      var thumbCol = document.createElement("div");
+      thumbCol.className = "col-auto";
       var thumb = document.createElement("img");
       thumb.src = item.preview;
       thumb.alt = "";
+      thumb.className = "queue-thumb rounded border bg-body-secondary";
+      thumbCol.appendChild(thumb);
 
-      var right = document.createElement("div");
+      var main = document.createElement("div");
+      main.className = "col";
       var fields = document.createElement("div");
-      fields.className = "fields";
+      fields.className = "row g-2";
 
-      var capWrap = document.createElement("div");
-      var capLabel = document.createElement("label");
-      capLabel.textContent = "Caption (wajib, maks. 120 karakter)";
       var cap = document.createElement("input");
       cap.type = "text";
       cap.maxLength = 120;
+      cap.className = "form-control form-control-sm";
       cap.value = item.caption;
       cap.addEventListener("input", function () { item.caption = cap.value; });
-      capWrap.appendChild(capLabel);
-      capWrap.appendChild(cap);
 
-      var sizeWrap = document.createElement("div");
-      var sizeLabel = document.createElement("label");
-      sizeLabel.textContent = "Ukuran";
       var size = document.createElement("select");
+      size.className = "form-select form-select-sm";
       [["auto", "Otomatis"], ["regular", "Regular"], ["wide", "Lebar"], ["tall", "Tinggi"]].forEach(function (o) {
         var opt = document.createElement("option");
         opt.value = o[0];
@@ -559,45 +790,40 @@
         size.appendChild(opt);
       });
       size.addEventListener("change", function () { item.size = size.value; });
-      sizeWrap.appendChild(sizeLabel);
-      sizeWrap.appendChild(size);
 
-      var altWrap = document.createElement("div");
-      altWrap.className = "full";
-      var altLabel = document.createElement("label");
-      altLabel.textContent = "Deskripsi foto / alt (opsional, default sama dengan caption)";
       var alt = document.createElement("input");
       alt.type = "text";
+      alt.className = "form-control form-control-sm";
       alt.value = item.alt;
       alt.addEventListener("input", function () { item.alt = alt.value; });
-      altWrap.appendChild(altLabel);
-      altWrap.appendChild(alt);
 
-      fields.appendChild(capWrap);
-      fields.appendChild(sizeWrap);
-      fields.appendChild(altWrap);
+      fields.appendChild(field("Caption (wajib, maks. 120 karakter)", cap, "col-sm-8"));
+      fields.appendChild(field("Ukuran", size, "col-sm-4"));
+      fields.appendChild(field("Deskripsi foto / alt (opsional, default sama dengan caption)", alt, "col-12"));
 
       var status = document.createElement("div");
-      status.className = "status";
+      status.className = "small text-body-secondary mt-1";
       status.textContent = item.file.name;
       item.statusEl = status;
 
       var remove = document.createElement("button");
       remove.type = "button";
+      remove.className = "btn btn-outline-secondary btn-sm mt-1";
       remove.textContent = "Batal";
-      remove.style.marginTop = "6px";
       remove.addEventListener("click", function () {
         URL.revokeObjectURL(item.preview);
         queue = queue.filter(function (q) { return q !== item; });
         renderQueue();
       });
 
-      right.appendChild(fields);
-      right.appendChild(status);
-      right.appendChild(remove);
-      row.appendChild(thumb);
-      row.appendChild(right);
-      box.appendChild(row);
+      main.appendChild(fields);
+      main.appendChild(status);
+      main.appendChild(remove);
+      row.appendChild(thumbCol);
+      row.appendChild(main);
+      inner.appendChild(row);
+      card.appendChild(inner);
+      box.appendChild(card);
     });
     $("uploadBtn").disabled = queue.length === 0;
   }
@@ -617,13 +843,18 @@
     if (!pending.length) return;
     btn.disabled = true;
     var ok = 0, failed = 0;
+    setProgress("uploadProgress", 0, pending.length);
 
     for (var i = 0; i < pending.length; i++) {
       var item = pending[i];
-      var setStatus = function (text, kind) { item.statusEl.textContent = text; item.statusEl.className = "status" + (kind ? " " + kind : ""); };
+      var setStatus = function (text, kind) {
+        item.statusEl.textContent = text;
+        item.statusEl.className = "small mt-1 " + (kind === "err" ? "text-danger" : kind === "ok" ? "text-success" : "text-body-secondary");
+      };
       if (!item.caption.trim()) {
         setStatus("Isi caption dulu.", "err");
         failed++;
+        setProgress("uploadProgress", i + 1, pending.length);
         continue;
       }
       try {
@@ -635,6 +866,8 @@
         form.append("alt", item.alt.trim());
         form.append("width", String(shrunk.width));
         form.append("height", String(shrunk.height));
+        try { form.append("thumb", await makeThumb(item.file), "thumb.jpg"); } catch (e) { /* thumbnail opsional */ }
+        try { form.append("blur", await makeBlur(item.file)); } catch (e) { /* pratinjau buram opsional */ }
         form.append("size", item.size === "auto" ? autoSize(shrunk.width, shrunk.height) : item.size);
         setStatus("Mengunggah (" + Math.round(shrunk.blob.size / 1024) + " KB)…");
         var res = await fetch("/api/admin/photo-upload", { method: "POST", headers: authHeaders(), body: form });
@@ -650,13 +883,228 @@
         setStatus("Gagal: " + e.message, "err");
         failed++;
       }
+      setProgress("uploadProgress", i + 1, pending.length);
     }
 
     queue.forEach(function (q) { if (q.done) URL.revokeObjectURL(q.preview); });
     say($("uploadMsg"), ok + " foto berhasil" + (failed ? ", " + failed + " gagal (lihat keterangan di tiap foto)." : "."), failed ? "err" : "ok");
     if (ok) loadGallery();
     // Foto yang sukses disembunyikan setelah jeda singkat agar status terbaca.
-    setTimeout(function () { queue = queue.filter(function (q) { return !q.done; }); renderQueue(); }, 1200);
+    setTimeout(function () {
+      queue = queue.filter(function (q) { return !q.done; });
+      renderQueue();
+      setProgress("uploadProgress", 0, 0);
+    }, 1200);
+  }
+
+  // ---------- Siapkan foto lama (thumbnail + pratinjau buram) ----------
+  async function buildMissingPrep() {
+    var todo = photosNeedingPrep();
+    if (!todo.length) return;
+    var btn = $("thumbBtn");
+    btn.disabled = true;
+    var done = 0, failed = 0;
+    for (var i = 0; i < todo.length; i++) {
+      var p = todo[i];
+      say($("galleryMsg"), "Menyiapkan foto " + (i + 1) + " dari " + todo.length + "…");
+      setProgress("galleryProgress", i, todo.length);
+      try {
+        var imageRes = await fetch(p.src);
+        if (!imageRes.ok) throw new Error("HTTP " + imageRes.status);
+        var source = await imageRes.blob();
+        if (p.has_thumb === 0) {
+          var form = new FormData();
+          form.append("thumb", await makeThumb(source), "thumb.jpg");
+          var res = await fetch("/api/admin/photos/" + p.id + "/thumb", { method: "POST", headers: authHeaders(), body: form });
+          if (!res.ok) throw new Error(await errorText(res));
+        }
+        if (p.has_blur === 0) {
+          var headers = authHeaders();
+          headers["Content-Type"] = "application/json";
+          var blurRes = await fetch("/api/admin/photos/" + p.id + "/blur", { method: "POST", headers: headers, body: JSON.stringify({ blur: await makeBlur(source) }) });
+          if (!blurRes.ok) throw new Error(await errorText(blurRes));
+        }
+        done++;
+      } catch (e) {
+        failed++;
+        say($("galleryMsg"), "Foto \"" + p.caption + "\" gagal disiapkan: " + e.message, "err");
+        if (/migrasi/i.test(e.message)) break;
+      }
+    }
+    btn.disabled = false;
+    setProgress("galleryProgress", 0, 0);
+    await loadGallery();
+    say($("galleryMsg"), done + " foto disiapkan" + (failed ? ", " + failed + " gagal." : "."), failed ? "err" : "ok");
+  }
+
+  // ---------- Cadangan (.zip tanpa kompresi, dibuat di browser) ----------
+  var crcTable = null;
+  function crc32(bytes) {
+    if (!crcTable) {
+      crcTable = [];
+      for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        crcTable[n] = c >>> 0;
+      }
+    }
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) crc = crcTable[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function makeZip(entries) {
+    var encoder = new TextEncoder();
+    var now = new Date();
+    var dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    var dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    var parts = [], central = [], offset = 0, centralSize = 0;
+    entries.forEach(function (entry) {
+      var name = encoder.encode(entry.name);
+      var crc = crc32(entry.data);
+      var size = entry.data.length;
+
+      var local = new DataView(new ArrayBuffer(30));
+      local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true);
+      local.setUint16(8, 0, true); local.setUint16(10, dosTime, true); local.setUint16(12, dosDate, true);
+      local.setUint32(14, crc, true); local.setUint32(18, size, true); local.setUint32(22, size, true);
+      local.setUint16(26, name.length, true); local.setUint16(28, 0, true);
+      parts.push(local.buffer, name, entry.data);
+
+      var head = new DataView(new ArrayBuffer(46));
+      head.setUint32(0, 0x02014b50, true); head.setUint16(4, 20, true); head.setUint16(6, 20, true);
+      head.setUint16(8, 0x0800, true); head.setUint16(10, 0, true); head.setUint16(12, dosTime, true);
+      head.setUint16(14, dosDate, true); head.setUint32(16, crc, true); head.setUint32(20, size, true);
+      head.setUint32(24, size, true); head.setUint16(28, name.length, true);
+      head.setUint32(42, offset, true);
+      central.push(head.buffer, name);
+      centralSize += 46 + name.length;
+      offset += 30 + name.length + size;
+    });
+    var end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true);
+    end.setUint16(8, entries.length, true); end.setUint16(10, entries.length, true);
+    end.setUint32(12, centralSize, true); end.setUint32(16, offset, true);
+    return new Blob(parts.concat(central, [end.buffer]), { type: "application/zip" });
+  }
+
+  async function downloadBackup() {
+    var btn = $("backupBtn");
+    btn.disabled = true;
+    try {
+      say($("galleryMsg"), "Mengambil daftar foto…");
+      var res = await fetch("/api/admin/photos?_=" + Date.now(), { cache: "no-store", headers: authHeaders() });
+      if (!res.ok) throw new Error(await errorText(res));
+      var list = await res.json();
+      var entries = [], manifest = [], missing = 0;
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i];
+        say($("galleryMsg"), "Mengambil foto " + (i + 1) + " dari " + list.length + "…");
+        setProgress("galleryProgress", i, list.length);
+        var file = null;
+        try {
+          var imageRes = await fetch(p.src);
+          if (!imageRes.ok) throw new Error("HTTP " + imageRes.status);
+          var blob = await imageRes.blob();
+          var ext = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : "jpg";
+          file = "images/" + String(i + 1).padStart(3, "0") + "-id" + p.id + "." + ext;
+          entries.push({ name: file, data: new Uint8Array(await blob.arrayBuffer()) });
+        } catch (e) {
+          missing++;
+        }
+        var record = {};
+        Object.keys(p).forEach(function (k) { if (k !== "has_thumb") record[k] = p[k]; });
+        record.file = file;
+        manifest.push(record);
+      }
+      var json = JSON.stringify({ exported_at: new Date().toISOString(), count: list.length, photos: manifest }, null, 2);
+      entries.unshift({ name: "photos.json", data: new TextEncoder().encode(json) });
+      var zip = makeZip(entries);
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(zip);
+      a.download = "potret-cadangan-" + new Date().toISOString().slice(0, 10) + ".zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+      say($("galleryMsg"), "Cadangan diunduh: " + (list.length - missing) + " foto" + (missing ? ", " + missing + " tidak bisa diambil (sumber luar)." : "."), missing ? "err" : "ok");
+    } catch (e) {
+      say($("galleryMsg"), "Cadangan gagal: " + e.message, "err");
+    } finally {
+      btn.disabled = false;
+      setProgress("galleryProgress", 0, 0);
+    }
+  }
+
+  // ---------- Penghitung karakter (mencegah teks terpotong diam-diam oleh batas maxlength) ----------
+  var COUNTER_IDS = ["editCaption", "editLocation", "editStory", "editCaptionEn", "editLocationEn", "editStoryEn", "noteId", "ledeId", "noteEn", "ledeEn"];
+
+  function updateCounter(id) {
+    var input = $(id), out = $(id + "Count");
+    if (!input || !out) return;
+    var max = Number(input.getAttribute("maxlength")) || 0;
+    var n = input.value.length;
+    out.textContent = n + " / " + max;
+    out.className = "form-text text-end mt-1" + (n >= max ? " text-danger fw-semibold" : n >= max * 0.9 ? " text-warning-emphasis" : "");
+  }
+
+  function refreshCounters() { COUNTER_IDS.forEach(updateCounter); }
+
+  // ---------- Teks halaman awal ----------
+  var INTRO_FIELDS = { note_id: "noteId", lede_id: "ledeId", note_en: "noteEn", lede_en: "ledeEn" };
+  var introDefaults = null;
+
+  function fillIntro(values, defaults) {
+    Object.keys(INTRO_FIELDS).forEach(function (key) {
+      var field = $(INTRO_FIELDS[key]);
+      field.value = values[key];
+      field.placeholder = defaults[key];
+    });
+    refreshCounters();
+  }
+
+  async function loadIntro() {
+    try {
+      var res = await fetch("/api/admin/settings?_=" + Date.now(), { cache: "no-store", headers: authHeaders() });
+      if (!res.ok) throw new Error(await errorText(res));
+      var data = await res.json();
+      introDefaults = data.defaults;
+      fillIntro(data.values, data.defaults);
+      $("introNote").hidden = data.available;
+      $("introSave").disabled = !data.available;
+    } catch (e) {
+      say($("introMsg"), "Gagal memuat teks halaman awal: " + e.message, "err");
+    }
+  }
+
+  async function saveIntro() {
+    if (!introDefaults) return;
+    var body = {};
+    Object.keys(INTRO_FIELDS).forEach(function (key) {
+      var value = $(INTRO_FIELDS[key]).value.replace(/\s+/g, " ").trim();
+      // Kosong atau sama dengan bawaan = kembali ke teks bawaan (null).
+      body[key] = !value || value === introDefaults[key] ? null : value;
+    });
+    var headers = authHeaders();
+    headers["Content-Type"] = "application/json";
+    $("introSave").disabled = true;
+    try {
+      var res = await fetch("/api/admin/settings", { method: "PUT", headers: headers, body: JSON.stringify(body) });
+      if (!res.ok) throw new Error(await errorText(res));
+      var data = await res.json();
+      fillIntro(data.values, data.defaults);
+      say($("introMsg"), "Teks disimpan. Perubahan tampil di situs dalam sekitar satu menit.", "ok");
+    } catch (e) {
+      say($("introMsg"), "Gagal menyimpan: " + e.message, "err");
+    } finally {
+      $("introSave").disabled = false;
+    }
+  }
+
+  function resetIntro() {
+    if (!introDefaults) return;
+    fillIntro(introDefaults, introDefaults);
+    say($("introMsg"), "Teks bawaan dimuat. Tekan Simpan teks untuk menerapkannya.");
   }
 
   // ---------- Wire up ----------
@@ -671,10 +1119,15 @@
   $("logoutBtn").addEventListener("click", logout);
   $("editSave").addEventListener("click", saveEdit);
   $("editFile").addEventListener("change", onEditFileChange);
-  $("editCancel").addEventListener("click", closeEdit);
-  $("editModal").addEventListener("click", function (e) { if (e.target === $("editModal")) closeEdit(); });
+  $("backupBtn").addEventListener("click", downloadBackup);
+  $("thumbBtn").addEventListener("click", buildMissingPrep);
   $("editCaption").addEventListener("keydown", function (e) { if (e.key === "Enter") saveEdit(); });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("editModal").hidden) closeEdit(); });
+  COUNTER_IDS.forEach(function (id) { $(id).addEventListener("input", function () { updateCounter(id); }); });
+  $("introSave").addEventListener("click", saveIntro);
+  $("introReset").addEventListener("click", resetIntro);
+  // Bootstrap menutup modal lewat tombol X, Batal, Esc, atau klik di luar; bersihkan status di sini.
+  $("editModal").addEventListener("shown.bs.modal", function () { $("editCaption").focus(); });
+  $("editModal").addEventListener("hidden.bs.modal", function () { resetEditFile(); editing = null; });
 
   var saved = safeGet();
   if (saved) {

@@ -3,7 +3,10 @@
 // Jalankan setelah mengubah templat atau teks:  node scripts/generate-pages.mjs
 // (Hasilnya sudah ada di repository; Cloudflare tidak perlu menjalankan skrip ini.)
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+
+// Teks bawaan kalimat pembuka dan paragraf pengantar: config/site-text.json (juga dipakai server dan halaman admin).
+const DEFAULTS = JSON.parse(readFileSync("config/site-text.json", "utf8"));
 
 const INSTAGRAM = "https://www.instagram.com/andreyson_hamilton_a";
 const YOUTUBE = "https://youtube.com/@aryasatyakeandre";
@@ -24,9 +27,9 @@ const TEXT = {
     langLabel: "Bahasa / Language",
     metaLeft: "Album pribadi",
     metaRight: "Jurnal visual · ",
-    note: "Kepingan hidup dalam gambar.",
-    ledeComment: "Teks pengantar: ubah di scripts/generate-pages.mjs (properti lede), lalu npm run generate:pages.",
-    lede: "Kumpulan potret dari hari-hari yang berjalan biasa: wajah, tempat, dan cahaya yang ingin saya ingat. Setiap foto adalah satu kepingan cerita. Klik sebuah foto untuk melihatnya lebih besar.",
+    note: DEFAULTS.id.note,
+    ledeComment: "Teks bawaan kalimat pembuka dan paragraf pengantar: config/site-text.json. Bisa diubah dari halaman /admin tanpa deploy.",
+    lede: DEFAULTS.id.lede,
     more: "Lihat semua momen",
     featuredComment: "Foto unggulan diisi otomatis dari foto pertama di galeri.",
     headingLeft: "Fragmen yang disimpan",
@@ -61,9 +64,9 @@ const TEXT = {
     langLabel: "Bahasa / Language",
     metaLeft: "Personal album",
     metaRight: "Visual journal · ",
-    note: "Fragments of life, in pictures.",
-    ledeComment: "Teks pengantar (Inggris): ubah di scripts/generate-pages.mjs (properti lede), lalu npm run generate:pages.",
-    lede: "A collection of portraits from ordinary days: faces, places, and light I want to remember. Every photo is a small piece of a story. Click a photo to see it larger.",
+    note: DEFAULTS.en.note,
+    ledeComment: "Teks bawaan (Inggris): config/site-text.json. Bisa diubah dari halaman /admin tanpa deploy.",
+    lede: DEFAULTS.en.lede,
     more: "See all moments",
     featuredComment: "Foto unggulan diisi otomatis dari foto pertama di galeri.",
     headingLeft: "Saved fragments",

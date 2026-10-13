@@ -1,5 +1,5 @@
 import { isAuthorized, json } from "../../_lib/auth";
-import { toBase64, toDimension, validateImage } from "../../_lib/images";
+import { batchWithFallback, insertFile, readBlur, readThumb, toBase64, toDimension, validateImage } from "../../_lib/images";
 
 type PhotoSize = "regular" | "wide" | "tall";
 
@@ -29,14 +29,28 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const image = file as File;
     const id = crypto.randomUUID();
     const data = toBase64(await image.arrayBuffer());
+    const thumb = await readThumb(form.get("thumb"));
+    const blur = readBlur(form.get("blur"));
     const src = `/api/img/${id}`;
 
-    await env.DB.batch([
-      env.DB.prepare("INSERT INTO photo_files (id, mime, data, size_bytes) VALUES (?, ?, ?, ?)").bind(id, image.type, data, image.size),
-      env.DB.prepare(
-        "INSERT INTO photos (src, alt, caption, size, sort_order, width, height) VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM photos), ?, ?)"
-      ).bind(src, alt, caption, size, width, height)
-    ]);
+    const build = (withThumb: boolean, withBlur: boolean): D1PreparedStatement[] => [
+      insertFile(env.DB, id, image.type, data, image.size, withThumb ? thumb : null),
+      withBlur
+        ? env.DB.prepare(
+          "INSERT INTO photos (src, alt, caption, size, sort_order, width, height, blur) VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM photos), ?, ?, ?)"
+        ).bind(src, alt, caption, size, width, height, blur)
+        : env.DB.prepare(
+          "INSERT INTO photos (src, alt, caption, size, sort_order, width, height) VALUES (?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM photos), ?, ?)"
+        ).bind(src, alt, caption, size, width, height)
+    ];
+
+    // Dari yang paling lengkap ke yang paling sederhana (lihat batchWithFallback).
+    const attempts: Array<() => D1PreparedStatement[]> = [];
+    if (thumb && blur) attempts.push(() => build(true, true));
+    if (thumb) attempts.push(() => build(true, false));
+    if (blur) attempts.push(() => build(false, true));
+    attempts.push(() => build(false, false));
+    await batchWithFallback(env.DB, attempts);
 
     return json({ src, message: "Foto ditambahkan." }, 201);
   } catch (error) {

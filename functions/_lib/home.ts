@@ -3,6 +3,7 @@
 // menjalankan JavaScript, jadi tag ini harus ada di HTML awal.
 
 import { alternateLinks, homePath, Lang, pick } from "./i18n";
+import { homeTexts } from "./site";
 
 type Env = {
   DB?: D1Database;
@@ -59,11 +60,16 @@ export async function serveHome(request: Request, env: Env, next: () => Promise<
     tags.push(`<meta name="twitter:image" content="${escapeAttr(image)}">`);
   }
 
+  // Kalimat pembuka dan paragraf pengantar yang diubah dari admin menggantikan teks bawaan di HTML awal.
+  const texts = await homeTexts(env.DB, lang);
+
   const headers = new Headers(response.headers);
   headers.delete("content-length");
   headers.set("cache-control", "public, max-age=60");
 
   return new HTMLRewriter()
     .on("head", { element(head) { head.append(`\n  ${tags.join("\n  ")}\n`, { html: true }); } })
+    .on("p.intro-note", { element(element) { if (texts.customNote) element.setInnerContent(texts.note); } })
+    .on("p.intro-lede", { element(element) { if (texts.customLede) element.setInnerContent(texts.lede); } })
     .transform(new Response(response.body, { status: response.status, headers }));
 }
