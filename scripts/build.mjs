@@ -17,9 +17,11 @@ copyFileSync("src/styles.css", "dist/assets/styles.css");
 copyFileSync("node_modules/bootstrap/dist/css/bootstrap.min.css", "dist/assets/vendor/bootstrap.min.css");
 copyFileSync("node_modules/bootstrap/dist/js/bootstrap.bundle.min.js", "dist/assets/vendor/bootstrap.bundle.min.js");
 
-// Bootstrap Icons: CSS menunjuk ke ./fonts/, jadi folder fonts disalin sejajar dengan CSS-nya.
-copyFileSync("node_modules/bootstrap-icons/font/bootstrap-icons.min.css", "dist/assets/vendor/bootstrap-icons.min.css");
-cpSync("node_modules/bootstrap-icons/font/fonts", "dist/assets/vendor/fonts", { recursive: true });
+// Bootstrap Icons (font ikon) juga di-host sendiri.
+mkdirSync("dist/assets/vendor/bootstrap-icons/fonts", { recursive: true });
+copyFileSync("node_modules/bootstrap-icons/font/bootstrap-icons.min.css", "dist/assets/vendor/bootstrap-icons/bootstrap-icons.min.css");
+copyFileSync("node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2", "dist/assets/vendor/bootstrap-icons/fonts/bootstrap-icons.woff2");
+copyFileSync("node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff", "dist/assets/vendor/bootstrap-icons/fonts/bootstrap-icons.woff");
 
 if (existsSync("public/photos")) {
   cpSync("public/photos", "dist/photos", { recursive: true });

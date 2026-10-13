@@ -70,7 +70,7 @@
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
           <h2 class="h5 mb-0">Foto di galeri <span id="count" class="badge text-bg-secondary fw-normal"></span></h2>
           <div class="d-flex flex-wrap gap-2">
-            <button id="thumbBtn" class="btn btn-outline-secondary btn-sm" type="button" hidden>Buat thumbnail foto lama</button>
+            <button id="thumbBtn" class="btn btn-outline-secondary btn-sm" type="button" hidden title="Membuat thumbnail dan pratinjau buram untuk foto lama">Siapkan foto lama</button>
             <button id="backupBtn" class="btn btn-outline-secondary btn-sm" type="button">Unduh cadangan (.zip)</button>
           </div>
         </div>
@@ -368,18 +368,19 @@
     });
 
     $("count").textContent = photos.length + (hiddenCount ? " · " + hiddenCount + " tersembunyi" : "");
-    var missing = photosNeedingThumb().length;
+    var missing = photosNeedingPrep().length;
     $("thumbBtn").hidden = missing === 0;
-    $("thumbBtn").textContent = "Buat thumbnail foto lama (" + missing + ")";
+    $("thumbBtn").textContent = "Siapkan foto lama (" + missing + ")";
   }
 
   var D1_SRC = /^\/api\/img\/[0-9a-f-]{36}$/;
 
   function thumbSrc(src) { return D1_SRC.test(src) ? src + "?s=thumb" : src; }
 
-  // Hanya foto di D1 yang bisa punya thumbnail. has_thumb dikirim server; jika kolomnya belum ada, tombol disembunyikan.
-  function photosNeedingThumb() {
-    return photos.filter(function (p) { return D1_SRC.test(p.src) && p.has_thumb === 0; });
+  // Foto lama di D1 yang belum punya thumbnail (has_thumb) atau pratinjau buram (has_blur).
+  // Jika kolomnya belum ada di database, penanda ini tidak dikirim server dan foto itu dilewati.
+  function photosNeedingPrep() {
+    return photos.filter(function (p) { return D1_SRC.test(p.src) && (p.has_thumb === 0 || p.has_blur === 0); });
   }
 
   function setTileButtons(disabled) {
@@ -565,6 +566,7 @@
         form.append("width", String(shrunk.width));
         form.append("height", String(shrunk.height));
         try { form.append("thumb", await makeThumb(editNewFile), "thumb.jpg"); } catch (e) { /* thumbnail opsional */ }
+        try { form.append("blur", await makeBlur(editNewFile)); } catch (e) { /* pratinjau buram opsional */ }
         say($("editMsg"), "Mengunggah file baru (" + Math.round(shrunk.blob.size / 1024) + " KB)…");
         var imageRes = await fetch("/api/admin/photos/" + p.id + "/image", { method: "POST", headers: authHeaders(), body: form });
         if (!imageRes.ok) throw new Error(await errorText(imageRes));
@@ -659,6 +661,25 @@
     URL.revokeObjectURL(loaded.url);
     if (!blob) throw new Error("Thumbnail gagal dibuat");
     return blob;
+  }
+
+  // Pratinjau buram: gambar mungil (sisi terpanjang 20 px) sebagai data URI JPEG, tampil sebelum foto selesai dimuat.
+  async function makeBlur(source) {
+    var loaded = await loadImage(source);
+    var img = loaded.img;
+    var w = img.naturalWidth, h = img.naturalHeight;
+    var scale = Math.min(1, 20 / Math.max(w, h));
+    var canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(w * scale));
+    canvas.height = Math.max(1, Math.round(h * scale));
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    var dataUrl = canvas.toDataURL("image/jpeg", 0.5);
+    URL.revokeObjectURL(loaded.url);
+    if (!/^data:image\/jpeg;base64,/.test(dataUrl)) throw new Error("Pratinjau buram gagal dibuat");
+    return dataUrl;
   }
 
   function autoSize(w, h) {
@@ -798,6 +819,7 @@
         form.append("width", String(shrunk.width));
         form.append("height", String(shrunk.height));
         try { form.append("thumb", await makeThumb(item.file), "thumb.jpg"); } catch (e) { /* thumbnail opsional */ }
+        try { form.append("blur", await makeBlur(item.file)); } catch (e) { /* pratinjau buram opsional */ }
         form.append("size", item.size === "auto" ? autoSize(shrunk.width, shrunk.height) : item.size);
         setStatus("Mengunggah (" + Math.round(shrunk.blob.size / 1024) + " KB)…");
         var res = await fetch("/api/admin/photo-upload", { method: "POST", headers: authHeaders(), body: form });
@@ -827,36 +849,44 @@
     }, 1200);
   }
 
-  // ---------- Thumbnail foto lama ----------
-  async function buildMissingThumbs() {
-    var todo = photosNeedingThumb();
+  // ---------- Siapkan foto lama (thumbnail + pratinjau buram) ----------
+  async function buildMissingPrep() {
+    var todo = photosNeedingPrep();
     if (!todo.length) return;
     var btn = $("thumbBtn");
     btn.disabled = true;
     var done = 0, failed = 0;
     for (var i = 0; i < todo.length; i++) {
       var p = todo[i];
-      say($("galleryMsg"), "Membuat thumbnail " + (i + 1) + " dari " + todo.length + "…");
+      say($("galleryMsg"), "Menyiapkan foto " + (i + 1) + " dari " + todo.length + "…");
       setProgress("galleryProgress", i, todo.length);
       try {
         var imageRes = await fetch(p.src);
         if (!imageRes.ok) throw new Error("HTTP " + imageRes.status);
-        var thumb = await makeThumb(await imageRes.blob());
-        var form = new FormData();
-        form.append("thumb", thumb, "thumb.jpg");
-        var res = await fetch("/api/admin/photos/" + p.id + "/thumb", { method: "POST", headers: authHeaders(), body: form });
-        if (!res.ok) throw new Error(await errorText(res));
+        var source = await imageRes.blob();
+        if (p.has_thumb === 0) {
+          var form = new FormData();
+          form.append("thumb", await makeThumb(source), "thumb.jpg");
+          var res = await fetch("/api/admin/photos/" + p.id + "/thumb", { method: "POST", headers: authHeaders(), body: form });
+          if (!res.ok) throw new Error(await errorText(res));
+        }
+        if (p.has_blur === 0) {
+          var headers = authHeaders();
+          headers["Content-Type"] = "application/json";
+          var blurRes = await fetch("/api/admin/photos/" + p.id + "/blur", { method: "POST", headers: headers, body: JSON.stringify({ blur: await makeBlur(source) }) });
+          if (!blurRes.ok) throw new Error(await errorText(blurRes));
+        }
         done++;
       } catch (e) {
         failed++;
-        say($("galleryMsg"), "Thumbnail untuk \"" + p.caption + "\" gagal: " + e.message, "err");
+        say($("galleryMsg"), "Foto \"" + p.caption + "\" gagal disiapkan: " + e.message, "err");
         if (/migrasi/i.test(e.message)) break;
       }
     }
     btn.disabled = false;
     setProgress("galleryProgress", 0, 0);
     await loadGallery();
-    say($("galleryMsg"), done + " thumbnail dibuat" + (failed ? ", " + failed + " gagal." : "."), failed ? "err" : "ok");
+    say($("galleryMsg"), done + " foto disiapkan" + (failed ? ", " + failed + " gagal." : "."), failed ? "err" : "ok");
   }
 
   // ---------- Cadangan (.zip tanpa kompresi, dibuat di browser) ----------
@@ -971,7 +1001,7 @@
   $("editSave").addEventListener("click", saveEdit);
   $("editFile").addEventListener("change", onEditFileChange);
   $("backupBtn").addEventListener("click", downloadBackup);
-  $("thumbBtn").addEventListener("click", buildMissingThumbs);
+  $("thumbBtn").addEventListener("click", buildMissingPrep);
   $("editCaption").addEventListener("keydown", function (e) { if (e.key === "Enter") saveEdit(); });
   // Bootstrap menutup modal lewat tombol X, Batal, Esc, atau klik di luar; bersihkan status di sini.
   $("editModal").addEventListener("shown.bs.modal", function () { $("editCaption").focus(); });

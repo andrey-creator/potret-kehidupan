@@ -1,5 +1,5 @@
 import { isAuthorized, json } from "../../../../_lib/auth";
-import { batchWithThumbFallback, fileIdFromSrc, insertFile, readThumb, toBase64, toDimension, validateImage } from "../../../../_lib/images";
+import { batchWithFallback, fileIdFromSrc, insertFile, readBlur, readThumb, toBase64, toDimension, validateImage } from "../../../../_lib/images";
 
 type Env = {
   DB: D1Database;
@@ -32,16 +32,36 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     const src = `/api/img/${fileId}`;
     const data = toBase64(await image.arrayBuffer());
     const thumb = await readThumb(form.get("thumb"));
+    const blur = readBlur(form.get("blur"));
     const oldFileId = fileIdFromSrc(row.src);
 
-    await batchWithThumbFallback(env.DB, Boolean(thumb), (withThumb) => {
+    const build = (withThumb: boolean, withBlur: boolean): D1PreparedStatement[] => {
       const statements = [
         insertFile(env.DB, fileId, image.type, data, image.size, withThumb ? thumb : null),
-        env.DB.prepare("UPDATE photos SET src = ?, width = ?, height = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(src, width, height, id)
+        // Pratinjau buram lama milik gambar sebelumnya tidak boleh tersisa: ganti dengan yang baru atau kosongkan.
+        withBlur
+          ? env.DB.prepare("UPDATE photos SET src = ?, width = ?, height = ?, blur = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(src, width, height, blur, id)
+          : env.DB.prepare("UPDATE photos SET src = ?, width = ?, height = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(src, width, height, id)
       ];
       if (oldFileId) statements.push(env.DB.prepare("DELETE FROM photo_files WHERE id = ?").bind(oldFileId));
       return statements;
-    });
+    };
+
+    const attempts: Array<() => D1PreparedStatement[]> = [];
+    if (thumb && blur) attempts.push(() => build(true, true));
+    if (thumb) attempts.push(() => build(true, false));
+    if (blur) attempts.push(() => build(false, true));
+    attempts.push(() => build(false, false));
+    await batchWithFallback(env.DB, attempts);
+
+    // Jika gambar baru tidak membawa pratinjau buram, kosongkan yang lama (diabaikan bila kolomnya belum ada).
+    if (!blur) {
+      try {
+        await env.DB.prepare("UPDATE photos SET blur = NULL WHERE id = ?").bind(id).run();
+      } catch {
+        // Migrasi 0006 belum dijalankan.
+      }
+    }
 
     return json({ src, message: "File foto diganti." });
   } catch (error) {

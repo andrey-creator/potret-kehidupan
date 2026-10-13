@@ -1,4 +1,5 @@
-import { alternateLinks, formatDate, homePath, Lang, pick, photoPath, STRINGS } from "./i18n";
+import { alternateLinks, formatDate, Lang, pick, photoPath, STRINGS } from "./i18n";
+import { renderNavbar } from "./navbar";
 import { DETAIL_COLUMN_SETS, queryWithFallback } from "./photos";
 
 type Env = {
@@ -32,32 +33,6 @@ const escapeHtml = (value: string): string => value
   .replaceAll("'", "&#39;");
 
 const pad = (value: number): string => String(value).padStart(2, "0");
-
-/** Navbar sticky yang sama dengan halaman utama; pilihan bahasa menunjuk ke versi halaman foto ini. */
-const siteNav = (lang: Lang, photoId: number): string => {
-  const t = STRINGS[lang];
-  return `<nav class="navbar navbar-expand-md sticky-top site-nav" aria-label="${escapeHtml(t.navMain)}">
-    <div class="container-fluid shell">
-      <a class="navbar-brand site-brand" href="${homePath(lang)}">Potret Kehidupan</a>
-      <button class="navbar-toggler border-0 shadow-none px-0" type="button" data-bs-toggle="collapse" data-bs-target="#siteMenu" aria-controls="siteMenu" aria-expanded="false" aria-label="${escapeHtml(t.toggleMenu)}">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="siteMenu">
-        <ul class="navbar-nav ms-md-auto align-items-md-center gap-md-4 pt-3 pt-md-0">
-          <li class="nav-item"><a class="nav-link px-0" href="${t.galleryLink}"><i class="bi bi-images me-1" aria-hidden="true"></i>${escapeHtml(t.navGallery)}</a></li>
-          <li class="nav-item"><a class="nav-link px-0" href="https://www.instagram.com/andreyson_hamilton_a" target="_blank" rel="noreferrer"><i class="bi bi-instagram me-1" aria-hidden="true"></i>Instagram</a></li>
-          <li class="nav-item"><a class="nav-link px-0" href="https://youtube.com/@aryasatyakeandre" target="_blank" rel="noreferrer"><i class="bi bi-youtube me-1" aria-hidden="true"></i>YouTube</a></li>
-          <li class="nav-item">
-            <div class="lang-switch" role="group" aria-label="Bahasa / Language">
-              <a href="${photoPath("id", photoId)}"${lang === "id" ? ' aria-current="true"' : ""} hreflang="id" lang="id">ID</a>
-              <a href="${photoPath("en", photoId)}"${lang === "en" ? ' aria-current="true"' : ""} hreflang="en" lang="en">EN</a>
-            </div>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </nav>`;
-};
 
 export const notFound = async (request: Request, env: Env): Promise<Response> => {
   const page = await env.ASSETS.fetch(new URL("/404.html", request.url));
@@ -101,7 +76,12 @@ export async function renderPhotoPage(request: Request, env: Env, rawId: string 
   const alt = pick(lang, photo.alt, photo.alt_en);
   const location = pick(lang, photo.location, photo.location_en).trim();
   const story = pick(lang, photo.story, photo.story_en).trim();
-  const meta = [formatDate(lang, photo.taken_at), location].filter(Boolean).join(" · ");
+  const dateText = formatDate(lang, photo.taken_at);
+  const meta = [dateText, location].filter(Boolean).join(" · ");
+  const metaHtml = [
+    dateText ? `<span><i class="bi bi-calendar3" aria-hidden="true"></i> ${escapeHtml(dateText)}</span>` : "",
+    location ? `<span><i class="bi bi-geo-alt" aria-hidden="true"></i> ${escapeHtml(location)}</span>` : ""
+  ].join("");
   const description = story ? story.replace(/\s+/g, " ").slice(0, 200) : (meta || t.homeDescription);
   const imageUrl = photo.src.startsWith("/") ? `${origin}${photo.src}` : photo.src;
   const pageUrl = `${origin}${photoPath(lang, photo.id)}`;
@@ -130,14 +110,14 @@ export async function renderPhotoPage(request: Request, env: Env, rawId: string 
   <meta property="og:locale" content="${t.locale}">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/assets/vendor/bootstrap.min.css">
-  <link rel="stylesheet" href="/assets/vendor/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
-  ${siteNav(lang, photo.id)}
+  ${renderNavbar(lang, { id: photoPath("id", photo.id), en: photoPath("en", photo.id) })}
   <main class="shell photo-view">
-    <nav class="photo-nav" aria-label="${escapeHtml(t.navLabel)}">
-      <a href="${t.galleryLink}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>${escapeHtml(t.back)}</a>
+    <nav class="photo-nav d-flex align-items-baseline justify-content-between gap-3" aria-label="${escapeHtml(t.navLabel)}">
+      <a href="${t.galleryLink}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>${escapeHtml(t.back)}</a>
       ${index >= 0 ? `<span>${pad(index + 1)} / ${pad(order.length)}</span>` : ""}
     </nav>
     <figure class="photo-figure">
@@ -145,38 +125,54 @@ export async function renderPhotoPage(request: Request, env: Env, rawId: string 
     </figure>
     <section class="photo-info">
       <h1 class="photo-title">${escapeHtml(caption)}</h1>
-      ${meta ? `<p class="photo-meta">${escapeHtml(meta)}</p>` : ""}
+      ${metaHtml ? `<p class="photo-meta">${metaHtml}</p>` : ""}
       ${story ? `<div class="photo-story">
         ${storyHtml(story)}
       </div>` : ""}
-      <div class="photo-actions d-flex align-items-center gap-3 mt-4">
-        <button class="btn btn-outline-dark btn-site rounded-0" id="shareButton" type="button"><i class="bi bi-share me-2" aria-hidden="true"></i>${escapeHtml(t.share)}</button>
+      <div class="d-flex align-items-center gap-3 mt-4">
+        <button class="btn btn-ink" id="shareButton" type="button"><i class="bi bi-share me-2" aria-hidden="true"></i>${escapeHtml(t.share)}</button>
         <span class="photo-share-status" id="shareStatus" role="status"></span>
       </div>
     </section>
-    <nav class="photo-pager" aria-label="${escapeHtml(t.pagerLabel)}">
+    <nav class="photo-pager d-flex justify-content-between gap-3" aria-label="${escapeHtml(t.pagerLabel)}">
       ${previous ? `<a class="prev" rel="prev" href="${photoPath(lang, previous.id)}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>${neighborCaption(previous)}</a>` : "<span></span>"}
       ${next ? `<a class="next" rel="next" href="${photoPath(lang, next.id)}">${neighborCaption(next)}<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>` : ""}
     </nav>
   </main>
-  <script src="/assets/vendor/bootstrap.bundle.min.js" defer></script>
+  <div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3">
+    <div class="toast align-items-center text-bg-dark border-0" id="shareToast" role="status" aria-live="polite" aria-atomic="true" data-bs-delay="3200">
+      <div class="d-flex">
+        <div class="toast-body"><i class="bi bi-check-circle me-2" aria-hidden="true"></i><span id="shareToastText"></span></div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="${escapeHtml(t.closeMessage)}"></button>
+      </div>
+    </div>
+  </div>
+  <script src="/assets/vendor/bootstrap.bundle.min.js"></script>
   <script>
     (function () {
       var button = document.getElementById("shareButton");
       var status = document.getElementById("shareStatus");
+      var toast = document.getElementById("shareToast");
+      var toastText = document.getElementById("shareToastText");
       if (!button) return;
       var copied = ${JSON.stringify(t.copied)};
       var manual = ${JSON.stringify(t.copyManually)};
+      function tell(message) {
+        if (window.bootstrap && toast && toastText) {
+          toastText.textContent = message;
+          window.bootstrap.Toast.getOrCreateInstance(toast).show();
+        } else {
+          status.textContent = message;
+        }
+      }
       button.addEventListener("click", function () {
         var data = { title: document.title, url: location.href };
         if (navigator.share) {
           navigator.share(data).catch(function () {});
         } else if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(location.href).then(function () {
-            status.textContent = copied;
-          }, function () { status.textContent = manual; });
+          navigator.clipboard.writeText(location.href).then(function () { tell(copied); }, function () { tell(manual); });
         } else {
-          status.textContent = manual;
+          tell(manual);
         }
       });
     })();

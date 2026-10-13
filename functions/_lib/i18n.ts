@@ -9,15 +9,13 @@ type Strings = {
   homeTitle: string;
   homeDescription: string;
   galleryLink: string;
-  navMain: string;
-  navGallery: string;
-  toggleMenu: string;
   back: string;
   share: string;
   copied: string;
   copyManually: string;
   navLabel: string;
   pagerLabel: string;
+  closeMessage: string;
   months: string[];
   formatDate: (day: number, month: string, year: string) => string;
 };
@@ -30,15 +28,13 @@ export const STRINGS: Record<Lang, Strings> = {
     homeTitle: "Potret Kehidupan — Kepingan hidup dalam gambar.",
     homeDescription: "Potret Kehidupan — kepingan hidup dalam gambar.",
     galleryLink: "/#gallery",
-    navMain: "Navigasi utama",
-    navGallery: "Galeri",
-    toggleMenu: "Buka atau tutup menu",
-    back: "Galeri",
+    back: "← Galeri",
     share: "Bagikan",
     copied: "Tautan disalin.",
     copyManually: "Salin dari kolom alamat browser.",
     navLabel: "Navigasi halaman foto",
     pagerLabel: "Foto lainnya",
+    closeMessage: "Tutup pesan",
     months: ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"],
     formatDate: (day, month, year) => `${day} ${month} ${year}`
   },
@@ -49,15 +45,13 @@ export const STRINGS: Record<Lang, Strings> = {
     homeTitle: "Potret Kehidupan — Fragments of life, in pictures.",
     homeDescription: "Potret Kehidupan — fragments of life, in pictures.",
     galleryLink: "/en/#gallery",
-    navMain: "Main navigation",
-    navGallery: "Gallery",
-    toggleMenu: "Toggle menu",
-    back: "Gallery",
+    back: "← Gallery",
     share: "Share",
     copied: "Link copied.",
     copyManually: "Copy it from the browser address bar.",
     navLabel: "Photo page navigation",
     pagerLabel: "More photos",
+    closeMessage: "Close message",
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
     formatDate: (day, month, year) => `${month} ${day}, ${year}`
   }

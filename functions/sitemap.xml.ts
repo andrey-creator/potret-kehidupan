@@ -33,3 +33,6 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=600" }
   });
 };
+
+// HEAD (dipakai pemeriksa tautan dan beberapa crawler) dijawab seperti GET; runtime membuang isi respons.
+export const onRequestHead = onRequestGet;

@@ -35,24 +35,31 @@ export const readThumb = async (value: FormDataEntryValue | null): Promise<strin
 /** Id file di D1 dari src berbentuk /api/img/<uuid>, atau null jika src bukan file D1. */
 export const fileIdFromSrc = (src: string): string | null => /^\/api\/img\/([0-9a-f-]{36})$/.exec(src)?.[1] ?? null;
 
+/** Pratinjau buram: gambar mungil base64 (maks. ~3 KB). Nilai yang tidak valid diabaikan. */
+export const readBlur = (value: FormDataEntryValue | null): string | null => {
+  if (typeof value !== "string") return null;
+  return /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]{20,3000}$/.test(value) ? value : null;
+};
+
 /**
- * Menjalankan batch yang menyimpan thumbnail; jika kolom thumb belum ada (migrasi 0004 belum dijalankan),
- * mengulang tanpa thumbnail agar upload tetap berhasil.
+ * Menjalankan batch dengan beberapa percobaan: dari yang paling lengkap (thumbnail + pratinjau buram) ke yang
+ * paling sederhana. Jika migrasi terbaru belum dijalankan, percobaan lengkap gagal lalu otomatis turun satu
+ * tingkat, sehingga upload tetap berhasil (tanpa fitur yang belum didukung database).
  */
-export async function batchWithThumbFallback(
+export async function batchWithFallback(
   db: D1Database,
-  hasThumb: boolean,
-  build: (withThumb: boolean) => D1PreparedStatement[]
+  attempts: Array<() => D1PreparedStatement[]>
 ): Promise<void> {
-  if (!hasThumb) {
-    await db.batch(build(false));
-    return;
+  let lastError: unknown;
+  for (const build of attempts) {
+    try {
+      await db.batch(build());
+      return;
+    } catch (error) {
+      lastError = error;
+    }
   }
-  try {
-    await db.batch(build(true));
-  } catch {
-    await db.batch(build(false));
-  }
+  throw lastError;
 }
 
 export const insertFile = (

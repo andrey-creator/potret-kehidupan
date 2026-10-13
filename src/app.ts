@@ -2,8 +2,17 @@ import type { Photo } from "./types.js";
 
 type Lang = "id" | "en";
 
+// Bootstrap dimuat sebagai skrip biasa (public/index.html) dan tersedia sebagai variabel global.
+type BsModal = { show(): void; hide(): void };
+type BsToast = { show(): void };
+declare const bootstrap: {
+  Modal: { getOrCreateInstance(element: Element): BsModal };
+  Toast: { getOrCreateInstance(element: Element): BsToast };
+} | undefined;
+
 const isLocalPreview = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
 const lang: Lang = document.documentElement.lang === "en" ? "en" : "id";
+const reduceMotion = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const TEXT = {
   id: {
@@ -15,7 +24,6 @@ const TEXT = {
     hint: "Klik untuk melihat",
     loadFailed: "Galeri belum bisa dimuat. Muat ulang halaman beberapa saat lagi.",
     empty: "Belum ada momen yang ditampilkan.",
-    share: "Bagikan",
     copied: "Tautan disalin.",
     copyManually: "Salin dari kolom alamat browser."
   },
@@ -28,35 +36,42 @@ const TEXT = {
     hint: "Click to view",
     loadFailed: "The gallery could not be loaded. Please reload the page in a moment.",
     empty: "No moments to show yet.",
-    share: "Share",
     copied: "Link copied.",
     copyManually: "Copy it from the browser address bar."
   }
 }[lang];
 
+const SLIDE_MS = 4500; // harus sama dengan --slideshow-interval di styles.css
+const REVEALS = ["left", "up", "right", "clip"] as const;
+
 const gallery = document.querySelector<HTMLElement>("#gallery");
 const featured = document.querySelector<HTMLElement>("#featured");
 const loading = document.querySelector<HTMLElement>("#galleryLoading");
 const galleryCount = document.querySelector<HTMLElement>("#galleryCount");
+const slideshowStart = document.querySelector<HTMLButtonElement>("#slideshowStart");
 const lightbox = document.querySelector<HTMLElement>("#lightbox");
 const lightboxImage = document.querySelector<HTMLImageElement>("#lightboxImage");
 const lightboxCaption = document.querySelector<HTMLElement>("#lightboxCaption");
 const lightboxCount = document.querySelector<HTMLElement>("#lightboxCount");
 const lightboxMeta = document.querySelector<HTMLElement>("#lightboxMeta");
-const lightboxStory = document.querySelector<HTMLElement>("#lightboxStory");
-const lightboxStoryText = document.querySelector<HTMLElement>("#lightboxStoryText");
-const lightboxReadMore = document.querySelector<HTMLAnchorElement>("#lightboxReadMore");
 const lightboxLink = document.querySelector<HTMLAnchorElement>("#lightboxLink");
 const lightboxShare = document.querySelector<HTMLButtonElement>("#lightboxShare");
-const lightboxStatus = document.querySelector<HTMLElement>("#lightboxStatus");
 const lightboxClose = document.querySelector<HTMLButtonElement>("#lightboxClose");
 const lightboxPrevious = document.querySelector<HTMLButtonElement>("#lightboxPrevious");
 const lightboxNext = document.querySelector<HTMLButtonElement>("#lightboxNext");
+const lightboxPlay = document.querySelector<HTMLButtonElement>("#lightboxPlay");
+const lightboxProgress = document.querySelector<HTMLElement>("#lightboxProgress");
+const lightboxProgressWrap = document.querySelector<HTMLElement>("#lightboxProgressWrap");
 const lightboxBackdrop = document.querySelector<HTMLElement>("#lightboxBackdrop");
+const shareToast = document.querySelector<HTMLElement>("#shareToast");
+const shareToastText = document.querySelector<HTMLElement>("#shareToastText");
 
 let photos: Photo[] = [];
 let activeIndex = 0;
+let lightboxOpen = false;
 let opener: HTMLElement | null = null;
+let playing = false;
+let slideTimer: number | undefined;
 const preloaded = new Map<string, HTMLImageElement>();
 
 const padNumber = (number: number): string => String(number).padStart(2, "0");
@@ -74,7 +89,6 @@ function pickText(base: string, english: string | null | undefined): string {
 const captionOf = (item: Photo): string => pickText(item.caption, item.caption_en);
 const altOf = (item: Photo): string => pickText(item.alt, item.alt_en);
 const locationOf = (item: Photo): string => pickText(item.location ?? "", item.location_en).trim();
-const storyOf = (item: Photo): string => pickText(item.story ?? "", item.story_en).replace(/\s+/g, " ").trim();
 const photoUrl = (id: number): string => (lang === "en" ? `/en/photo/${id}` : `/foto/${id}`);
 
 function formatDate(iso: string | null | undefined): string {
@@ -86,6 +100,11 @@ function formatDate(iso: string | null | undefined): string {
 // Foto yang disimpan di D1 punya versi kecil (?s=thumb) untuk grid; sumber lain dipakai apa adanya.
 function thumbSrc(src: string): string {
   return /^\/api\/img\/[0-9a-f-]{36}$/.test(src) ? `${src}?s=thumb` : src;
+}
+
+/** Hanya data URI gambar kecil yang diterima sebagai pratinjau buram. */
+function safeBlur(value: string | null | undefined): string | null {
+  return value && /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value) ? value : null;
 }
 
 function dimensions(item: Photo): { width: number; height: number } | null {
@@ -100,6 +119,13 @@ function ratioStyle(item: Photo): string {
   return size ? ` width="${size.width}" height="${size.height}" style="aspect-ratio: ${size.width} / ${size.height}"` : "";
 }
 
+function metaSpans(item: Photo): { icon: string; text: string }[] {
+  return [
+    { icon: "bi-calendar3", text: formatDate(item.taken_at) },
+    { icon: "bi-geo-alt", text: locationOf(item) }
+  ].filter((part) => part.text);
+}
+
 function renderFeatured(item: Photo): void {
   if (!featured) return;
   const size = dimensions(item);
@@ -108,9 +134,9 @@ function renderFeatured(item: Photo): void {
     <button class="featured-button" type="button" aria-label="${escapeHtml(TEXT.viewFeatured(captionOf(item)))}" data-index="0">
       <img src="${escapeHtml(item.src)}" alt="${escapeHtml(altOf(item))}"${sizeAttributes} fetchpriority="high" decoding="async">
     </button>
-    <figcaption class="featured-caption">
+    <figcaption class="featured-caption d-flex align-items-baseline justify-content-between gap-3 pt-3">
       <p>${escapeHtml(captionOf(item))}</p>
-      <span>${escapeHtml(TEXT.featuredTag)}</span>
+      <span class="text-uppercase">${escapeHtml(TEXT.featuredTag)}</span>
     </figcaption>
   `;
   featured.hidden = false;
@@ -123,6 +149,92 @@ function renderMessage(text: string, count: string): void {
   gallery.innerHTML = `<p class="gallery-loading" role="status">${escapeHtml(text)}</p>`;
 }
 
+function renderCard(item: Photo, index: number): string {
+  const meta = metaSpans(item)
+    .map((part) => `<span><i class="bi ${part.icon}" aria-hidden="true"></i> ${escapeHtml(part.text)}</span>`)
+    .join("");
+  return `
+    <article class="card gallery-card is-${item.size} border-0 rounded-0 bg-transparent" data-index="${index}" data-reveal="${REVEALS[index % REVEALS.length]}">
+      <button class="photo-button" type="button" aria-label="${escapeHtml(TEXT.viewPhoto(captionOf(item)))}" data-index="${index}">
+        <img class="card-img-top rounded-0" src="${escapeHtml(thumbSrc(item.src))}" alt="${escapeHtml(altOf(item))}"${ratioStyle(item)} loading="${index < 2 ? "eager" : "lazy"}" decoding="async">
+        <span class="photo-overlay" aria-hidden="true">
+          <span class="photo-overlay-caption">${escapeHtml(captionOf(item))}</span>
+          <span class="photo-overlay-meta">${meta}</span>
+          <span class="photo-hint"><i class="bi bi-zoom-in" aria-hidden="true"></i> ${escapeHtml(TEXT.hint)}</span>
+        </span>
+      </button>
+      <div class="card-body px-0 pb-0 pt-3 d-sm-flex align-items-sm-baseline justify-content-sm-between gap-3 photo-caption">
+        <p class="card-text mb-0">${escapeHtml(captionOf(item))}</p>
+        <span class="photo-number d-block d-sm-inline mt-1 mt-sm-0">${padNumber(index + 1)} / ${padNumber(photos.length)}</span>
+      </div>
+    </article>
+  `;
+}
+
+/** Pratinjau buram sebagai latar, lalu foto asli muncul perlahan begitu selesai dimuat. */
+function setupImageLoading(): void {
+  gallery?.querySelectorAll<HTMLButtonElement>(".photo-button").forEach((button) => {
+    const item = photos[Number(button.dataset.index)];
+    const blur = safeBlur(item?.blur);
+    if (blur) button.style.setProperty("--blur", `url("${blur}")`);
+    const image = button.querySelector("img");
+    if (!image) return;
+    const done = (): void => button.classList.add("is-loaded");
+    if (image.complete && image.naturalWidth > 0) {
+      done();
+    } else {
+      image.addEventListener("load", done, { once: true });
+      image.addEventListener("error", done, { once: true }); // jangan biarkan foto rusak tak terlihat
+    }
+  });
+}
+
+/** Parallax tipis: kartu bergeser maksimum 12 px, arah berlawanan antar kartu bersebelahan. */
+function setupParallax(cards: HTMLElement[]): void {
+  if (reduceMotion || cards.length === 0) return;
+  const visible = new Set<HTMLElement>();
+  let ticking = false;
+
+  // Posisi halaman dihitung dari offsetTop (tidak terpengaruh transform/translate), agar tidak saling memengaruhi.
+  const pageTop = (element: HTMLElement): number => {
+    let top = 0;
+    let node: HTMLElement | null = element;
+    while (node) {
+      top += node.offsetTop;
+      node = node.offsetParent as HTMLElement | null;
+    }
+    return top;
+  };
+
+  const update = (): void => {
+    ticking = false;
+    const viewport = window.innerHeight;
+    visible.forEach((card) => {
+      const center = pageTop(card) + card.offsetHeight / 2 - window.scrollY;
+      const delta = (center - viewport / 2) / viewport; // sekitar -1 sampai 1
+      const direction = Number(card.dataset.index) % 2 === 0 ? 1 : -1;
+      const offset = Math.max(-12, Math.min(12, -delta * 26 * direction));
+      card.style.setProperty("--parallax-y", `${offset.toFixed(1)}px`);
+    });
+  };
+  const schedule = (): void => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const card = entry.target as HTMLElement;
+      if (entry.isIntersecting) visible.add(card); else visible.delete(card);
+    });
+    schedule();
+  }, { rootMargin: "20% 0px" });
+  cards.forEach((card) => observer.observe(card));
+  window.addEventListener("scroll", schedule, { passive: true });
+  window.addEventListener("resize", schedule, { passive: true });
+}
+
 function renderGallery(): void {
   if (!gallery || !galleryCount) return;
   galleryCount.textContent = String(photos.length);
@@ -130,23 +242,10 @@ function renderGallery(): void {
   if (photos.length > 0) renderFeatured(photos[0]);
   // Foto pertama tampil di header; galeri menampilkan sisanya (kecuali hanya ada satu foto).
   const offset = photos.length > 1 ? 1 : 0;
-  gallery.innerHTML = photos.slice(offset).map((item, position) => {
-    const index = position + offset;
-    return `
-    <article class="gallery-card card border-0 rounded-0 bg-transparent is-${item.size}" data-index="${index}">
-      <button class="photo-button" type="button" aria-label="${escapeHtml(TEXT.viewPhoto(captionOf(item)))}" data-index="${index}">
-        <img src="${escapeHtml(thumbSrc(item.src))}" alt="${escapeHtml(altOf(item))}"${ratioStyle(item)} loading="${index < 2 ? "eager" : "lazy"}" decoding="async">
-        <span class="photo-hint"><i class="bi bi-zoom-in me-1" aria-hidden="true"></i>${escapeHtml(TEXT.hint)}</span>
-      </button>
-      <div class="card-body photo-caption d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-baseline gap-1 gap-sm-3 px-0 pb-0 pt-3">
-        <p class="card-text mb-0">${escapeHtml(captionOf(item))}</p>
-        <span class="photo-number">${padNumber(index + 1)} / ${padNumber(photos.length)}</span>
-      </div>
-    </article>
-  `;
-  }).join("");
+  gallery.innerHTML = photos.slice(offset).map((item, position) => renderCard(item, position + offset)).join("");
+  setupImageLoading();
 
-  const cards = gallery.querySelectorAll<HTMLElement>(".gallery-card");
+  const cards = Array.from(gallery.querySelectorAll<HTMLElement>(".gallery-card"));
   const revealObserver = new IntersectionObserver((entries, observer) => {
     entries.forEach((entry) => {
       if (!entry.isIntersecting) return;
@@ -158,14 +257,16 @@ function renderGallery(): void {
     card.style.transitionDelay = `${Math.min(index % 4, 3) * 70}ms`;
     revealObserver.observe(card);
   });
+  setupParallax(cards);
+
+  if (slideshowStart) slideshowStart.hidden = photos.length < 2 || typeof bootstrap === "undefined";
 }
 
 // ---------- Lightbox (Bootstrap Modal) ----------
-// Modal Bootstrap sudah mengurus: backdrop, tombol Esc, jebakan fokus (Tab), kunci scroll, dan animasi.
-// Kode di sini hanya mengisi isi foto, navigasi kiri/kanan, geser jari, dan tombol bagikan.
 
-const lightboxModal = lightbox ? bootstrap.Modal.getOrCreateInstance(lightbox) : null;
-const isLightboxOpen = (): boolean => lightbox?.classList.contains("show") ?? false;
+function getModal(): BsModal | null {
+  return lightbox && typeof bootstrap !== "undefined" ? bootstrap.Modal.getOrCreateInstance(lightbox) : null;
+}
 
 /** Memuat foto sebelum dan sesudah foto aktif agar perpindahan terasa instan. */
 function preloadNeighbors(index: number): void {
@@ -180,52 +281,55 @@ function preloadNeighbors(index: number): void {
   });
 }
 
-const EXCERPT_LENGTH = 110;
-
-/** Potongan awal cerita (di batas kata). `truncated` true jika ada yang dipotong. */
-function excerptOf(story: string): { text: string; truncated: boolean } {
-  if (story.length <= EXCERPT_LENGTH) return { text: story, truncated: false };
-  const cut = story.slice(0, EXCERPT_LENGTH);
-  const space = cut.lastIndexOf(" ");
-  return { text: `${(space > 40 ? cut.slice(0, space) : cut).replace(/[\s,.;:!?-]+$/, "")}…`, truncated: true };
+function notify(message: string): void {
+  if (!shareToast || !shareToastText || typeof bootstrap === "undefined") return;
+  shareToastText.textContent = message;
+  bootstrap.Toast.getOrCreateInstance(shareToast).show();
 }
 
-function setStatus(text: string): void {
-  if (lightboxStatus) lightboxStatus.textContent = text;
+function setMeta(item: Photo): void {
+  if (!lightboxMeta) return;
+  lightboxMeta.textContent = "";
+  metaSpans(item).forEach((part) => {
+    const span = document.createElement("span");
+    const icon = document.createElement("i");
+    icon.className = `bi ${part.icon}`;
+    icon.setAttribute("aria-hidden", "true");
+    span.append(icon, document.createTextNode(part.text));
+    lightboxMeta.append(span);
+  });
+  lightboxMeta.hidden = lightboxMeta.childElementCount === 0;
 }
 
 function showLightbox(index: number, trigger?: HTMLElement | null): void {
-  if (!lightboxModal || !lightboxImage || !lightboxCaption || !lightboxCount || photos.length === 0) return;
-  const wasClosed = !isLightboxOpen();
-  if (wasClosed) opener = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
-  activeIndex = (index + photos.length) % photos.length;
+  if (!lightboxImage || !lightboxCaption || !lightboxCount || photos.length === 0) return;
+  const modal = getModal();
+  const wrapped = (index + photos.length) % photos.length;
+  if (!modal) {
+    // Tanpa JavaScript Bootstrap: buka halaman foto yang dirender di server.
+    const id = photos[wrapped].id;
+    if (id) location.href = photoUrl(id);
+    return;
+  }
+  if (!lightboxOpen) opener = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+  activeIndex = wrapped;
   const item = photos[activeIndex];
   lightboxImage.src = item.src;
   lightboxImage.alt = altOf(item);
   lightboxCaption.textContent = captionOf(item);
   lightboxCount.textContent = `${padNumber(activeIndex + 1)} / ${padNumber(photos.length)}`;
-  if (lightboxMeta) {
-    lightboxMeta.textContent = [formatDate(item.taken_at), locationOf(item)].filter(Boolean).join(" · ");
-    lightboxMeta.hidden = !lightboxMeta.textContent;
-  }
-  const story = storyOf(item);
-  const { text: storyText, truncated } = excerptOf(story);
-  if (lightboxStory && lightboxStoryText && lightboxReadMore) {
-    lightboxStory.hidden = !story;
-    lightboxStoryText.textContent = storyText;
-    // "Baca selengkapnya" hanya muncul jika cerita terpotong dan foto punya halaman sendiri.
-    lightboxReadMore.hidden = !(truncated && item.id);
-    if (item.id) lightboxReadMore.href = photoUrl(item.id);
-  }
+  setMeta(item);
   if (lightboxLink) {
-    // Tautan umum disembunyikan bila "Baca selengkapnya" sudah menuju halaman yang sama.
-    lightboxLink.hidden = !item.id || (!!lightboxReadMore && !lightboxReadMore.hidden);
+    lightboxLink.hidden = !item.id;
     if (item.id) lightboxLink.href = photoUrl(item.id);
   }
   if (lightboxShare) lightboxShare.hidden = !item.id;
-  setStatus("");
-  if (wasClosed) lightboxModal.show(trigger ?? undefined);
   preloadNeighbors(activeIndex);
+  if (playing) scheduleSlide();
+  if (!lightboxOpen) {
+    lightboxOpen = true;
+    modal.show();
+  }
 }
 
 /** Fokus kembali ke foto yang sedang dilihat (atau yang diklik semula) agar pengguna keyboard tidak "tersesat". */
@@ -238,7 +342,13 @@ function restoreFocus(): void {
   opener = null;
 }
 
-function moveLightbox(step: number): void { showLightbox(activeIndex + step); }
+function closeLightbox(): void {
+  getModal()?.hide();
+}
+
+function moveLightbox(step: number): void {
+  showLightbox(activeIndex + step);
+}
 
 async function shareCurrent(): Promise<void> {
   const item = photos[activeIndex];
@@ -250,17 +360,63 @@ async function shareCurrent(): Promise<void> {
       await navigator.share(data);
     } else if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(url);
-      setStatus(TEXT.copied);
+      notify(TEXT.copied);
     } else {
-      setStatus(TEXT.copyManually);
+      notify(TEXT.copyManually);
     }
   } catch (error) {
     // Pengguna membatalkan dialog bagikan: bukan kesalahan. Kegagalan menyalin diberi petunjuk manual.
-    if ((error as DOMException)?.name !== "AbortError") setStatus(TEXT.copyManually);
+    if ((error as DOMException)?.name !== "AbortError") notify(TEXT.copyManually);
   }
 }
 
-// Geser jari di layar sentuh: kiri = foto berikutnya, kanan = sebelumnya.
+// ---------- Slideshow ----------
+
+function setPlayUi(on: boolean): void {
+  if (lightboxPlay) {
+    const icon = lightboxPlay.querySelector("i");
+    if (icon) icon.className = on ? "bi bi-pause-fill" : "bi bi-play-fill";
+    lightboxPlay.setAttribute("aria-pressed", String(on));
+    lightboxPlay.setAttribute("aria-label", (on ? lightboxPlay.dataset.labelPause : lightboxPlay.dataset.labelPlay) ?? "");
+  }
+  if (lightboxProgressWrap) lightboxProgressWrap.hidden = !on || reduceMotion;
+}
+
+function restartProgress(): void {
+  if (!lightboxProgress) return;
+  lightboxProgress.classList.remove("is-running");
+  void lightboxProgress.offsetWidth; // memaksa animasi mulai dari awal
+  if (playing && !document.hidden) lightboxProgress.classList.add("is-running");
+}
+
+function clearSlideTimer(): void {
+  if (slideTimer !== undefined) window.clearTimeout(slideTimer);
+  slideTimer = undefined;
+}
+
+function scheduleSlide(): void {
+  clearSlideTimer();
+  restartProgress();
+  if (!playing || document.hidden) return;
+  slideTimer = window.setTimeout(() => moveLightbox(1), SLIDE_MS);
+}
+
+function startSlideshow(): void {
+  if (photos.length < 2) return;
+  playing = true;
+  setPlayUi(true);
+  scheduleSlide();
+}
+
+function stopSlideshow(): void {
+  playing = false;
+  clearSlideTimer();
+  setPlayUi(false);
+  lightboxProgress?.classList.remove("is-running");
+}
+
+// ---------- Geser di layar sentuh ----------
+
 const SWIPE_DISTANCE = 50;
 let touchStart: { x: number; y: number } | null = null;
 
@@ -320,23 +476,34 @@ gallery?.addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".photo-button");
   if (button) showLightbox(Number(button.dataset.index), button);
 });
+slideshowStart?.addEventListener("click", () => {
+  showLightbox(0, slideshowStart);
+  startSlideshow();
+});
 lightboxPrevious?.addEventListener("click", () => moveLightbox(-1));
 lightboxNext?.addEventListener("click", () => moveLightbox(1));
+lightboxPlay?.addEventListener("click", () => { if (playing) stopSlideshow(); else startSlideshow(); });
 lightboxShare?.addEventListener("click", () => { void shareCurrent(); });
-// Klik area gelap di sekitar foto menutup modal (tombol X dan Esc ditangani Bootstrap).
+// Klik di area kosong mengelilingi foto menutup lightbox.
 lightbox?.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
-  if (target === lightboxBackdrop || target.matches(".modal, .modal-dialog, .modal-content, .lightbox-body")) lightboxModal?.hide();
+  if (target === lightboxBackdrop || target.classList.contains("modal-body") || target.classList.contains("lightbox-panel")) closeLightbox();
 });
+// Bootstrap mengurus Esc, kunci gulir, dan jebakan fokus; di sini hanya bersih-bersih dan fokus kembali.
 lightbox?.addEventListener("shown.bs.modal", () => lightboxClose?.focus());
+lightbox?.addEventListener("hide.bs.modal", stopSlideshow);
 lightbox?.addEventListener("hidden.bs.modal", () => {
-  lightboxImage?.removeAttribute("src");
+  lightboxOpen = false;
+  if (lightboxImage) lightboxImage.src = "";
   restoreFocus();
 });
 document.addEventListener("keydown", (event) => {
-  if (!isLightboxOpen()) return;
+  if (!lightboxOpen) return;
   if (event.key === "ArrowLeft") moveLightbox(-1);
   if (event.key === "ArrowRight") moveLightbox(1);
+});
+document.addEventListener("visibilitychange", () => {
+  if (playing) scheduleSlide();
 });
 
 const year = String(new Date().getFullYear());

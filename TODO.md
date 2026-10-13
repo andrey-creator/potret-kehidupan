@@ -1,11 +1,10 @@
 # TODO — Potret Kehidupan
 
 ## Sebelum dibagikan
-- [ ] Jalankan `npm install` (memasang `bootstrap-icons`), lalu commit `package.json` dan `package-lock.json` yang berubah. Tanpa ini build Cloudflare Pages gagal.
-- [ ] Jalankan migrasi `0004` dan `0005` di Console D1, lalu klik **Buat thumbnail foto lama** di `/admin`.
+- [ ] Jalankan migrasi `0004`, `0005`, dan `0006` di Console D1, lalu klik **Siapkan foto lama** di `/admin` (thumbnail + pratinjau buram).
 - [ ] Hapus semua foto placeholder dari `/admin` dan unggah foto asli.
 - [ ] Pilih foto unggulan (★) yang bagus untuk header dan pratinjau link.
-- [ ] Ganti teks pengantar di `public/index.html` dan `public/en/index.html` (komentar `EDIT TEKS PENGANTAR`).
+- [ ] Ganti teks pengantar di `scripts/generate-pages.mjs` (properti `lede`, Indonesia dan Inggris), lalu jalankan `npm run generate:pages`.
 - [ ] Isi terjemahan Inggris (tab English di Edit) untuk foto-foto pilihan.
 - [ ] Isi tanggal, lokasi, dan cerita singkat untuk foto-foto pilihan.
 - [ ] Uji pratinjau link di WhatsApp (halaman utama dan satu halaman `/foto/:id`).

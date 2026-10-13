@@ -5,6 +5,7 @@
   "description": "Galeri foto personal full-stack dengan Cloudflare Pages dan D1.",
   "scripts": {
     "build": "node scripts/build.mjs && tsc && node scripts/prune-dev.mjs",
+    "generate:pages": "node scripts/generate-pages.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.functions.json --noEmit",
     "dev": "wrangler pages dev dist --compatibility-date=2026-10-09 --port 8788 --ip 127.0.0.1"
   },
