@@ -1,7 +1,6 @@
 // Helper bersama untuk upload dan penggantian file foto (disimpan di D1 sebagai base64).
 
 export const MAX_BYTES = 1_300_000; // base64 ~1,73 MB, masih di bawah batas 2 MB per baris D1
-export const MAX_THUMB_BYTES = 400_000;
 export const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export const toBase64 = (buffer: ArrayBuffer): string => {
@@ -26,44 +25,5 @@ export const validateImage = (file: FormDataEntryValue | null): { error: string;
   return null;
 };
 
-/** Thumbnail bersifat opsional: file yang tidak valid diabaikan (galeri memakai file penuh). */
-export const readThumb = async (value: FormDataEntryValue | null): Promise<string | null> => {
-  if (!(value instanceof File) || value.size === 0 || value.size > MAX_THUMB_BYTES || !ALLOWED_TYPES.includes(value.type)) return null;
-  return toBase64(await value.arrayBuffer());
-};
-
 /** Id file di D1 dari src berbentuk /api/img/<uuid>, atau null jika src bukan file D1. */
 export const fileIdFromSrc = (src: string): string | null => /^\/api\/img\/([0-9a-f-]{36})$/.exec(src)?.[1] ?? null;
-
-/** Pratinjau buram: gambar mungil base64 (maks. ~3 KB). Nilai yang tidak valid diabaikan. */
-export const readBlur = (value: FormDataEntryValue | null): string | null => {
-  if (typeof value !== "string") return null;
-  return /^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]{20,3000}$/.test(value) ? value : null;
-};
-
-/**
- * Menjalankan batch dengan beberapa percobaan: dari yang paling lengkap (thumbnail + pratinjau buram) ke yang
- * paling sederhana. Jika migrasi terbaru belum dijalankan, percobaan lengkap gagal lalu otomatis turun satu
- * tingkat, sehingga upload tetap berhasil (tanpa fitur yang belum didukung database).
- */
-export async function batchWithFallback(
-  db: D1Database,
-  attempts: Array<() => D1PreparedStatement[]>
-): Promise<void> {
-  let lastError: unknown;
-  for (const build of attempts) {
-    try {
-      await db.batch(build());
-      return;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-  throw lastError;
-}
-
-export const insertFile = (
-  db: D1Database, id: string, mime: string, data: string, size: number, thumb: string | null
-): D1PreparedStatement => thumb
-  ? db.prepare("INSERT INTO photo_files (id, mime, data, size_bytes, thumb) VALUES (?, ?, ?, ?, ?)").bind(id, mime, data, size, thumb)
-  : db.prepare("INSERT INTO photo_files (id, mime, data, size_bytes) VALUES (?, ?, ?, ?)").bind(id, mime, data, size);
