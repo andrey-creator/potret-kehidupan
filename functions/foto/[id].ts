@@ -6,6 +6,3 @@ type Env = {
 };
 
 export const onRequestGet: PagesFunction<Env> = ({ request, env, params }) => renderPhotoPage(request, env, params.id, "id");
-
-// HEAD (dipakai pemeriksa tautan dan beberapa crawler) dijawab seperti GET; runtime membuang isi respons.
-export const onRequestHead = onRequestGet;

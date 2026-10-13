@@ -36,6 +36,3 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
   const row = await env.DB.prepare("SELECT mime, data FROM photo_files WHERE id = ?").bind(id).first<{ mime: string; data: string }>();
   return row ? imageResponse(row.data, row.mime, IMMUTABLE) : notFound();
 };
-
-// HEAD (dipakai pemeriksa tautan dan beberapa crawler) dijawab seperti GET; runtime membuang isi respons.
-export const onRequestHead = onRequestGet;

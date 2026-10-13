@@ -20,6 +20,3 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     return publicJson({ error: "Gagal membaca galeri." }, 500);
   }
 };
-
-// HEAD (dipakai pemeriksa tautan dan beberapa crawler) dijawab seperti GET; runtime membuang isi respons.
-export const onRequestHead = onRequestGet;
