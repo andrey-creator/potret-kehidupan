@@ -25,9 +25,7 @@ const TEXT = {
     loadFailed: "Galeri belum bisa dimuat. Muat ulang halaman beberapa saat lagi.",
     empty: "Belum ada momen yang ditampilkan.",
     copied: "Tautan disalin.",
-    copyManually: "Salin dari kolom alamat browser.",
-    loadMore: "Muat lebih banyak",
-    shown: (shown: number, total: number) => `Menampilkan ${shown} dari ${total} momen`
+    copyManually: "Salin dari kolom alamat browser."
   },
   en: {
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
@@ -39,15 +37,10 @@ const TEXT = {
     loadFailed: "The gallery could not be loaded. Please reload the page in a moment.",
     empty: "No moments to show yet.",
     copied: "Link copied.",
-    copyManually: "Copy it from the browser address bar.",
-    loadMore: "Load more",
-    shown: (shown: number, total: number) => `Showing ${shown} of ${total} moments`
+    copyManually: "Copy it from the browser address bar."
   }
 }[lang];
 
-const DEFAULT_PAGE_SIZE = 12; // jumlah foto di galeri sebelum "Muat lebih banyak" (bisa diubah dari halaman admin)
-const MIN_PAGE_SIZE = 1;
-const MAX_PAGE_SIZE = 100;
 const SLIDE_MS = 4500; // harus sama dengan --slideshow-interval di styles.css
 const REVEALS = ["left", "up", "right", "clip"] as const;
 
@@ -55,9 +48,6 @@ const gallery = document.querySelector<HTMLElement>("#gallery");
 const featured = document.querySelector<HTMLElement>("#featured");
 const loading = document.querySelector<HTMLElement>("#galleryLoading");
 const galleryCount = document.querySelector<HTMLElement>("#galleryCount");
-const loadMoreWrap = document.querySelector<HTMLElement>("#loadMoreWrap");
-const loadMoreButton = document.querySelector<HTMLButtonElement>("#loadMore");
-const loadMoreStatus = document.querySelector<HTMLElement>("#loadMoreStatus");
 const slideshowStart = document.querySelector<HTMLButtonElement>("#slideshowStart");
 const lightbox = document.querySelector<HTMLElement>("#lightbox");
 const lightboxImage = document.querySelector<HTMLImageElement>("#lightboxImage");
@@ -80,9 +70,6 @@ const shareToast = document.querySelector<HTMLElement>("#shareToast");
 const shareToastText = document.querySelector<HTMLElement>("#shareToastText");
 
 let photos: Photo[] = [];
-let pageSize = DEFAULT_PAGE_SIZE;
-let renderedUntil = 0; // indeks foto (eksklusif) yang sudah dirender di galeri
-let appendCards: (cards: HTMLElement[]) => void = () => {};
 let activeIndex = 0;
 let lightboxOpen = false;
 let opener: HTMLElement | null = null;
@@ -189,8 +176,8 @@ function renderCard(item: Photo, index: number): string {
 }
 
 /** Pratinjau buram sebagai latar, lalu foto asli muncul perlahan begitu selesai dimuat. */
-function setupImageLoading(cards: HTMLElement[]): void {
-  cards.flatMap((card) => Array.from(card.querySelectorAll<HTMLButtonElement>(".photo-button"))).forEach((button) => {
+function setupImageLoading(): void {
+  gallery?.querySelectorAll<HTMLButtonElement>(".photo-button").forEach((button) => {
     const item = photos[Number(button.dataset.index)];
     const blur = safeBlur(item?.blur);
     if (blur) button.style.setProperty("--blur", `url("${blur}")`);
@@ -206,9 +193,9 @@ function setupImageLoading(cards: HTMLElement[]): void {
   });
 }
 
-/** Parallax tipis: kartu bergeser maksimum 12 px, arah berlawanan antar kartu bersebelahan. Mengembalikan fungsi untuk mendaftarkan kartu baru. */
-function createParallax(): (cards: HTMLElement[]) => void {
-  if (reduceMotion) return () => {};
+/** Parallax tipis: kartu bergeser maksimum 12 px, arah berlawanan antar kartu bersebelahan. */
+function setupParallax(cards: HTMLElement[]): void {
+  if (reduceMotion || cards.length === 0) return;
   const visible = new Set<HTMLElement>();
   let ticking = false;
 
@@ -247,67 +234,9 @@ function createParallax(): (cards: HTMLElement[]) => void {
     });
     schedule();
   }, { rootMargin: "20% 0px" });
+  cards.forEach((card) => observer.observe(card));
   window.addEventListener("scroll", schedule, { passive: true });
   window.addEventListener("resize", schedule, { passive: true });
-  return (cards) => cards.forEach((card) => observer.observe(card));
-}
-
-/** Animasi muncul saat kartu masuk layar. Mengembalikan fungsi untuk mendaftarkan kartu baru. */
-function createReveal(): (cards: HTMLElement[]) => void {
-  const observer = new IntersectionObserver((entries, self) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      entry.target.classList.add("is-visible");
-      self.unobserve(entry.target);
-    });
-  }, { threshold: 0.12 });
-  // Jaring pengaman: jika observer tidak terpicu untuk sebuah kartu, kartu yang sudah masuk layar tetap ditampilkan.
-  const revealInView = (): void => {
-    gallery?.querySelectorAll<HTMLElement>(".gallery-card:not(.is-visible)").forEach((card) => {
-      const rect = card.getBoundingClientRect();
-      if (rect.top < window.innerHeight * 0.92 && rect.bottom > 0) card.classList.add("is-visible");
-    });
-  };
-  window.addEventListener("scroll", revealInView, { passive: true });
-  window.addEventListener("resize", revealInView, { passive: true });
-  return (cards) => {
-    cards.forEach((card, index) => {
-      card.style.transitionDelay = `${Math.min(index % 4, 3) * 70}ms`;
-      observer.observe(card);
-    });
-    window.setTimeout(revealInView, 1200);
-  };
-}
-
-/** Foto pertama tampil di header; galeri menampilkan sisanya (kecuali hanya ada satu foto). */
-const galleryOffset = (): number => (photos.length > 1 ? 1 : 0);
-
-function updateLoadMore(): void {
-  if (!loadMoreWrap || !loadMoreButton) return;
-  const shown = Math.max(renderedUntil, 1);
-  const hasMore = renderedUntil < photos.length;
-  loadMoreWrap.hidden = photos.length <= galleryOffset() + pageSize && !hasMore;
-  loadMoreButton.hidden = !hasMore;
-  if (loadMoreStatus) loadMoreStatus.textContent = TEXT.shown(Math.min(shown, photos.length), photos.length);
-}
-
-/** Merender foto berikutnya (satu halaman) ke galeri. `focusFirst` memindahkan fokus ke kartu baru pertama. */
-function renderNextPage(focusFirst: boolean): void {
-  if (!gallery) return;
-  const from = renderedUntil;
-  const to = Math.min(from + pageSize, photos.length);
-  if (to <= from) return;
-  const html = photos.slice(from, to).map((item, position) => renderCard(item, from + position)).join("");
-  const template = document.createElement("template");
-  template.innerHTML = html;
-  const cards = Array.from(template.content.querySelectorAll<HTMLElement>(".gallery-card"));
-  gallery.append(template.content);
-  renderedUntil = to;
-  setupImageLoading(cards);
-  appendCards(cards);
-  // Nomor "01 / 12" memakai jumlah total, jadi kartu lama tidak perlu dirender ulang.
-  updateLoadMore();
-  if (focusFirst) cards[0]?.querySelector<HTMLButtonElement>(".photo-button")?.focus({ preventScroll: false });
 }
 
 function renderGallery(): void {
@@ -315,15 +244,36 @@ function renderGallery(): void {
   galleryCount.textContent = String(photos.length);
   if (loading) loading.remove();
   if (photos.length > 0) renderFeatured(photos[0]);
-  gallery.innerHTML = "";
-  renderedUntil = galleryOffset();
-  const observeReveal = createReveal();
-  const observeParallax = createParallax();
-  appendCards = (cards) => {
-    observeReveal(cards);
-    observeParallax(cards);
+  // Foto pertama tampil di header; galeri menampilkan sisanya (kecuali hanya ada satu foto).
+  const offset = photos.length > 1 ? 1 : 0;
+  gallery.innerHTML = photos.slice(offset).map((item, position) => renderCard(item, position + offset)).join("");
+  setupImageLoading();
+
+  const cards = Array.from(gallery.querySelectorAll<HTMLElement>(".gallery-card"));
+  const revealObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("is-visible");
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: 0.12 });
+  // Jaring pengaman: jika observer tidak terpicu untuk sebuah kartu, kartu yang sudah masuk layar tetap ditampilkan.
+  const revealInView = (): void => {
+    cards.forEach((card) => {
+      if (card.classList.contains("is-visible")) return;
+      const rect = card.getBoundingClientRect();
+      if (rect.top < window.innerHeight * 0.92 && rect.bottom > 0) card.classList.add("is-visible");
+    });
   };
-  renderNextPage(false);
+  window.addEventListener("scroll", revealInView, { passive: true });
+  window.addEventListener("resize", revealInView, { passive: true });
+  window.setTimeout(revealInView, 1200);
+  cards.forEach((card, index) => {
+    card.style.transitionDelay = `${Math.min(index % 4, 3) * 70}ms`;
+    revealObserver.observe(card);
+  });
+  setupParallax(cards);
+
   if (slideshowStart) slideshowStart.hidden = photos.length < 2 || typeof bootstrap === "undefined";
 }
 
@@ -534,21 +484,7 @@ async function loadDevPhotos(): Promise<Photo[]> {
   return fallbackPhotos;
 }
 
-/** Jumlah foto per halaman dari pengaturan admin; jika gagal dimuat, pakai nilai bawaan. */
-async function loadPageSize(): Promise<number> {
-  try {
-    const response = await fetch("/api/settings", { headers: { Accept: "application/json" } });
-    if (!response.ok) return DEFAULT_PAGE_SIZE;
-    const data = await response.json() as { gallery_page_size?: unknown };
-    const value = Math.floor(Number(data.gallery_page_size));
-    return Number.isFinite(value) && value >= MIN_PAGE_SIZE ? Math.min(value, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
-  } catch {
-    return DEFAULT_PAGE_SIZE;
-  }
-}
-
 async function loadPhotos(): Promise<void> {
-  pageSize = await loadPageSize();
   try {
     const response = await fetch("/api/photos", { headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error(`API ${response.status}`);
@@ -581,7 +517,6 @@ gallery?.addEventListener("click", (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".photo-button");
   if (button) showLightbox(Number(button.dataset.index), button);
 });
-loadMoreButton?.addEventListener("click", () => renderNextPage(true));
 slideshowStart?.addEventListener("click", () => {
   showLightbox(0, slideshowStart);
   startSlideshow();
