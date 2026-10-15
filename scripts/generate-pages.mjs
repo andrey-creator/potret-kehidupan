@@ -37,6 +37,7 @@ const TEXT = {
     slideshow: "Putar slideshow",
     galleryLabel: "Galeri foto Potret Kehidupan",
     loading: "Memuat momen…",
+    loadMore: "Muat lebih banyak",
     footerLinks: "Tautan media sosial",
     lightboxLabel: "Tampilan foto besar",
     close: "Tutup tampilan foto",
@@ -75,6 +76,7 @@ const TEXT = {
     slideshow: "Play slideshow",
     galleryLabel: "Potret Kehidupan photo gallery",
     loading: "Loading moments…",
+    loadMore: "Load more",
     footerLinks: "Social media links",
     lightboxLabel: "Enlarged photo view",
     close: "Close photo view",
@@ -170,6 +172,10 @@ function page(t) {
     <section class="gallery" id="gallery" aria-label="${t.galleryLabel}">
       <div class="gallery-loading" id="galleryLoading" role="status">${t.loading}</div>
     </section>
+    <div class="load-more" id="loadMoreWrap" hidden>
+      <p class="load-more-status" id="loadMoreStatus" role="status" aria-live="polite"></p>
+      <button class="btn btn-ink" id="loadMore" type="button">${t.loadMore}<i class="bi bi-plus-lg ms-2" aria-hidden="true"></i></button>
+    </div>
   </main>
 
   <footer class="site-footer shell">
