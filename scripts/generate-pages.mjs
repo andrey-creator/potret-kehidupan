@@ -41,6 +41,7 @@ const TEXT = {
     lightboxLabel: "Tampilan foto besar",
     close: "Tutup tampilan foto",
     openPage: "Buka halaman foto",
+    readMore: "Baca selengkapnya",
     share: "Bagikan",
     photoNav: "Navigasi foto",
     prev: "Foto sebelumnya",
@@ -78,6 +79,7 @@ const TEXT = {
     lightboxLabel: "Enlarged photo view",
     close: "Close photo view",
     openPage: "Open photo page",
+    readMore: "Read more",
     share: "Share",
     photoNav: "Photo navigation",
     prev: "Previous photo",
@@ -196,6 +198,10 @@ function page(t) {
             <div class="lightbox-side">
               <p class="lightbox-caption" id="lightboxCaption"></p>
               <p class="lightbox-meta" id="lightboxMeta" hidden></p>
+              <div class="lightbox-story" id="lightboxStory" hidden>
+                <p id="lightboxStoryText"></p>
+                <a class="lightbox-readmore" id="lightboxReadMore" href="#" hidden>${t.readMore}<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>
+              </div>
               <a class="lightbox-link" id="lightboxLink" href="#" hidden>${t.openPage}<i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i></a>
               <button class="btn btn-ink-light lightbox-share" id="lightboxShare" type="button" hidden><i class="bi bi-share me-2" aria-hidden="true"></i>${t.share}</button>
               <p class="lightbox-count" id="lightboxCount"></p>

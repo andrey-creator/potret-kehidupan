@@ -54,6 +54,9 @@ const lightboxImage = document.querySelector<HTMLImageElement>("#lightboxImage")
 const lightboxCaption = document.querySelector<HTMLElement>("#lightboxCaption");
 const lightboxCount = document.querySelector<HTMLElement>("#lightboxCount");
 const lightboxMeta = document.querySelector<HTMLElement>("#lightboxMeta");
+const lightboxStory = document.querySelector<HTMLElement>("#lightboxStory");
+const lightboxStoryText = document.querySelector<HTMLElement>("#lightboxStoryText");
+const lightboxReadMore = document.querySelector<HTMLAnchorElement>("#lightboxReadMore");
 const lightboxLink = document.querySelector<HTMLAnchorElement>("#lightboxLink");
 const lightboxShare = document.querySelector<HTMLButtonElement>("#lightboxShare");
 const lightboxClose = document.querySelector<HTMLButtonElement>("#lightboxClose");
@@ -89,6 +92,7 @@ function pickText(base: string, english: string | null | undefined): string {
 const captionOf = (item: Photo): string => pickText(item.caption, item.caption_en);
 const altOf = (item: Photo): string => pickText(item.alt, item.alt_en);
 const locationOf = (item: Photo): string => pickText(item.location ?? "", item.location_en).trim();
+const storyOf = (item: Photo): string => pickText(item.story ?? "", item.story_en).replace(/\s+/g, " ").trim();
 const photoUrl = (id: number): string => (lang === "en" ? `/en/photo/${id}` : `/foto/${id}`);
 
 function formatDate(iso: string | null | undefined): string {
@@ -253,6 +257,17 @@ function renderGallery(): void {
       observer.unobserve(entry.target);
     });
   }, { threshold: 0.12 });
+  // Jaring pengaman: jika observer tidak terpicu untuk sebuah kartu, kartu yang sudah masuk layar tetap ditampilkan.
+  const revealInView = (): void => {
+    cards.forEach((card) => {
+      if (card.classList.contains("is-visible")) return;
+      const rect = card.getBoundingClientRect();
+      if (rect.top < window.innerHeight * 0.92 && rect.bottom > 0) card.classList.add("is-visible");
+    });
+  };
+  window.addEventListener("scroll", revealInView, { passive: true });
+  window.addEventListener("resize", revealInView, { passive: true });
+  window.setTimeout(revealInView, 1200);
   cards.forEach((card, index) => {
     card.style.transitionDelay = `${Math.min(index % 4, 3) * 70}ms`;
     revealObserver.observe(card);
@@ -301,6 +316,30 @@ function setMeta(item: Photo): void {
   lightboxMeta.hidden = lightboxMeta.childElementCount === 0;
 }
 
+const EXCERPT_LENGTH = 110;
+
+/** Potongan awal cerita (di batas kata). `truncated` true jika ada yang dipotong. */
+function excerptOf(story: string): { text: string; truncated: boolean } {
+  if (story.length <= EXCERPT_LENGTH) return { text: story, truncated: false };
+  const cut = story.slice(0, EXCERPT_LENGTH);
+  const space = cut.lastIndexOf(" ");
+  return { text: `${(space > 40 ? cut.slice(0, space) : cut).replace(/[\s,.;:!?-]+$/, "")}…`, truncated: true };
+}
+
+function setStory(item: Photo): void {
+  const story = storyOf(item);
+  const { text, truncated } = excerptOf(story);
+  if (lightboxStory && lightboxStoryText) {
+    lightboxStory.hidden = !story;
+    lightboxStoryText.textContent = text;
+  }
+  if (lightboxReadMore) {
+    // "Baca selengkapnya" hanya muncul jika cerita terpotong dan foto punya halaman sendiri.
+    lightboxReadMore.hidden = !(truncated && item.id);
+    if (item.id) lightboxReadMore.href = photoUrl(item.id);
+  }
+}
+
 function showLightbox(index: number, trigger?: HTMLElement | null): void {
   if (!lightboxImage || !lightboxCaption || !lightboxCount || photos.length === 0) return;
   const modal = getModal();
@@ -319,8 +358,10 @@ function showLightbox(index: number, trigger?: HTMLElement | null): void {
   lightboxCaption.textContent = captionOf(item);
   lightboxCount.textContent = `${padNumber(activeIndex + 1)} / ${padNumber(photos.length)}`;
   setMeta(item);
+  setStory(item);
   if (lightboxLink) {
-    lightboxLink.hidden = !item.id;
+    // Tautan umum disembunyikan bila "Baca selengkapnya" sudah menuju halaman yang sama.
+    lightboxLink.hidden = !item.id || (!!lightboxReadMore && !lightboxReadMore.hidden);
     if (item.id) lightboxLink.href = photoUrl(item.id);
   }
   if (lightboxShare) lightboxShare.hidden = !item.id;

@@ -7,8 +7,9 @@ const HAS_THUMB =
 const HAS_BLUR = "CASE WHEN blur IS NULL THEN 0 ELSE 1 END AS has_blur";
 
 export const PUBLIC_COLUMN_SETS = [
-  "id, src, alt, caption, size, sort_order, width, height, taken_at, location, caption_en, alt_en, location_en, blur",
-  "id, src, alt, caption, size, sort_order, width, height, taken_at, location, caption_en, alt_en, location_en",
+  "id, src, alt, caption, size, sort_order, width, height, taken_at, location, story, caption_en, alt_en, location_en, story_en, blur",
+  "id, src, alt, caption, size, sort_order, width, height, taken_at, location, story, caption_en, alt_en, location_en, story_en",
+  "id, src, alt, caption, size, sort_order, width, height, taken_at, location, story",
   "id, src, alt, caption, size, sort_order, width, height, taken_at, location",
   "id, src, alt, caption, size, sort_order, width, height",
   "id, src, alt, caption, size, sort_order"

@@ -203,6 +203,10 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
 .lightbox-caption { margin: 0; font-size: clamp(1rem, 1.5vw, 1.3rem); line-height: 1.2; overflow-wrap: anywhere; }
 .lightbox-meta { overflow-wrap: anywhere; display: flex; flex-direction: column; gap: .25rem; margin: 0; color: #adb8a9; font-size: .65rem; letter-spacing: .12em; line-height: 1.5; text-transform: uppercase; }
 .lightbox-meta span { display: inline-flex; align-items: center; gap: .4rem; }
+.lightbox-story { display: flex; flex-direction: column; gap: .6rem; margin: 0; color: #d9dfd6; font-size: .8rem; line-height: 1.55; overflow-wrap: anywhere; }
+.lightbox-story p { margin: 0; }
+.lightbox-readmore { width: fit-content; padding-bottom: .15rem; border-bottom: 1px solid #adb8a9; color: var(--white); font-size: .65rem; letter-spacing: .14em; text-decoration: none; text-transform: uppercase; }
+.lightbox-readmore:hover, .lightbox-readmore:focus-visible { border-bottom-color: var(--white); }
 .lightbox-link { width: fit-content; padding-bottom: .2rem; border-bottom: 1px solid #adb8a9; color: var(--white); font-size: .65rem; letter-spacing: .14em; text-decoration: none; text-transform: uppercase; }
 .lightbox-link:hover, .lightbox-link:focus-visible { border-bottom-color: var(--white); }
 .lightbox-share { --bs-btn-padding-y: .45rem; --bs-btn-padding-x: .85rem; --bs-btn-font-size: .62rem; width: fit-content; }
