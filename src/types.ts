@@ -19,4 +19,7 @@ export type Photo = {
   story_en?: string | null;
   // Pratinjau buram: data URI JPEG/WebP mungil yang tampil sebelum foto selesai dimuat.
   blur?: string | null;
+  // Album/kategori (dari /api/albums, bukan dari tabel foto).
+  album?: string | null;
+  album_en?: string | null;
 };

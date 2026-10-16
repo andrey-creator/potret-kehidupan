@@ -177,6 +177,10 @@
                 <div class="form-text text-end mt-1" id="editCaptionCount"></div>
                 <label for="editAlt" class="form-label mt-2">Deskripsi foto / alt (kosongkan untuk memakai caption)</label>
                 <input id="editAlt" type="text" class="form-control">
+                <label for="editAlbum" class="form-label mt-2">Album (opsional, maks. 40 karakter)</label>
+                <input id="editAlbum" type="text" class="form-control" maxlength="40" list="albumList" autocomplete="off">
+                <datalist id="albumList"></datalist>
+                <div class="form-text">Foto dengan nama album yang sama jadi satu tab di situs. Kosongkan untuk tanpa album.</div>
                 <div id="editExtra" hidden>
                   <div class="row g-2 mt-0">
                     <div class="col-sm-5">
@@ -198,6 +202,8 @@
                 <select id="editSize" class="form-select"></select>
               </div>
               <div class="tab-pane fade" id="editTabEn" role="tabpanel">
+                <label for="editAlbumEn" class="form-label">Album name (optional, max. 40 characters)</label>
+                <input id="editAlbumEn" type="text" class="form-control mb-3" maxlength="40" autocomplete="off">
                 <div id="editEnglish" hidden>
                   <p class="form-text mt-0">Semua isian opsional. Yang dikosongkan memakai teks Indonesia di versi English.</p>
                   <label for="editCaptionEn" class="form-label">Caption (max. 120 characters)</label>
@@ -314,8 +320,32 @@
     return "HTTP " + res.status;
   }
 
+  // Album per foto (id foto -> {album, album_en}); admin mendapat semua foto, termasuk yang disembunyikan.
+  var albumsMap = {};
+
+  async function loadAlbums() {
+    try {
+      var res = await fetch("/api/albums?_=" + Date.now(), { cache: "no-store", headers: authHeaders() });
+      albumsMap = res.ok ? await res.json() : {};
+    } catch (e) {
+      albumsMap = {};
+    }
+    var list = $("albumList");
+    list.textContent = "";
+    var seen = {};
+    Object.keys(albumsMap).forEach(function (id) {
+      var name = albumsMap[id].album;
+      if (!name || seen[name]) return;
+      seen[name] = true;
+      var option = document.createElement("option");
+      option.value = name;
+      list.appendChild(option);
+    });
+  }
+
   async function loadGallery() {
     say($("galleryMsg"), "Memuat…");
+    await loadAlbums();
     try {
       var res = await fetch("/api/admin/photos?_=" + Date.now(), { cache: "no-store", headers: authHeaders() });
       if (!res.ok) throw new Error(await errorText(res));
@@ -389,6 +419,7 @@
       if (i === featuredIndex) badges.appendChild(badge("★ Unggulan", "success"));
       if (!published) badges.appendChild(badge("Tersembunyi", "secondary"));
       if (p.caption_en) badges.appendChild(badge("EN", "info"));
+      if (albumsMap[p.id] && albumsMap[p.id].album) badges.appendChild(badge(albumsMap[p.id].album, "primary"));
       var info = document.createElement("small");
       info.className = "text-body-secondary";
       info.textContent = "#" + (i + 1) + " · ID " + p.id + " · " + p.size;
@@ -577,6 +608,9 @@
     $("editPreview").src = p.src;
     $("editCaption").value = p.caption;
     $("editAlt").value = p.alt === p.caption ? "" : p.alt;
+    var currentAlbum = albumsMap[p.id] || {};
+    $("editAlbum").value = currentAlbum.album || "";
+    $("editAlbumEn").value = currentAlbum.album_en || "";
     buildSizeOptions(Boolean(p.width && p.height), p.size);
 
     var hasExtra = "taken_at" in p;
@@ -669,6 +703,15 @@
       }
       var res = await putPhoto(p, changes);
       if (!res.ok) throw new Error(await errorText(res));
+      var albumName = $("editAlbum").value.trim();
+      var albumEn = $("editAlbumEn").value.trim();
+      var oldAlbum = albumsMap[p.id] || {};
+      if (albumName !== (oldAlbum.album || "") || albumEn !== (oldAlbum.album_en || "")) {
+        var albumHeaders = authHeaders();
+        albumHeaders["Content-Type"] = "application/json";
+        var albumRes = await fetch("/api/admin/album", { method: "PUT", headers: albumHeaders, body: JSON.stringify({ photo_id: p.id, album: albumName, album_en: albumEn }) });
+        if (!albumRes.ok) throw new Error("foto tersimpan, tetapi album gagal: " + await errorText(albumRes));
+      }
       closeEdit();
       await loadGallery();
       say($("galleryMsg"), "Perubahan disimpan.", "ok");

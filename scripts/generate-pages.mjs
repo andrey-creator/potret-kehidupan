@@ -38,6 +38,7 @@ const TEXT = {
     galleryLabel: "Galeri foto Potret Kehidupan",
     loading: "Memuat momen…",
     loadMore: "Muat lebih banyak",
+    albumLabel: "Album",
     filterLabel: "Saring galeri",
     filterLocation: "Lokasi",
     filterYear: "Tahun",
@@ -81,6 +82,7 @@ const TEXT = {
     galleryLabel: "Potret Kehidupan photo gallery",
     loading: "Loading moments…",
     loadMore: "Load more",
+    albumLabel: "Albums",
     filterLabel: "Filter gallery",
     filterLocation: "Location",
     filterYear: "Year",
@@ -177,6 +179,7 @@ function page(t) {
         <button class="btn btn-ink btn-slideshow" id="slideshowStart" type="button" hidden><i class="bi bi-play-fill me-1" aria-hidden="true"></i>${t.slideshow}</button>
       </div>
     </div>
+    <div class="album-tabs" id="albumTabs" role="group" aria-label="${t.albumLabel}" hidden></div>
     <div class="gallery-filters" id="galleryFilters" role="group" aria-label="${t.filterLabel}" hidden>
       <label class="filter"><span>${t.filterLocation}</span><select id="filterLocation" class="form-select form-select-sm rounded-0"></select></label>
       <label class="filter"><span>${t.filterYear}</span><select id="filterYear" class="form-select form-select-sm rounded-0"></select></label>

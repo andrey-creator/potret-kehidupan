@@ -128,6 +128,12 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
 .gallery-heading { color: var(--muted); font-size: .67rem; letter-spacing: .15em; }
 .btn-slideshow { --bs-btn-padding-y: .4rem; --bs-btn-padding-x: .85rem; --bs-btn-font-size: .62rem; }
 .gallery { display: grid; grid-auto-flow: dense; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: clamp(2.7rem, 6vw, 6rem) clamp(.9rem, 2.4vw, 2.5rem); }
+.album-tabs { display: flex; flex-wrap: wrap; gap: .4rem 1.6rem; margin-bottom: 1.6rem; border-bottom: 1px solid var(--line); }
+.album-tabs[hidden] { display: none; }
+.album-tab { margin-bottom: -1px; padding: .6rem 0; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--muted); font-size: .67rem; letter-spacing: .15em; text-transform: uppercase; transition: color .25s ease, border-color .25s ease; }
+.album-tab:hover { color: var(--ink); }
+.album-tab[aria-pressed="true"] { border-bottom-color: var(--ink); color: var(--ink); }
+.album-tab:focus-visible { outline: 2px solid var(--sage); outline-offset: 4px; }
 .gallery-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem 1.5rem; margin-bottom: clamp(2rem, 4vw, 3rem); }
 .gallery-filters[hidden], .gallery-filters [hidden] { display: none; }
 .gallery-filters .filter { display: flex; flex-direction: column; gap: .35rem; min-width: 10rem; color: var(--muted); font-size: .67rem; letter-spacing: .15em; text-transform: uppercase; }
@@ -201,8 +207,10 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
 .slideshow-bar.is-running { animation: slideshow-fill var(--slideshow-interval) linear forwards; }
 @keyframes slideshow-fill { from { width: 0; } to { width: 100%; } }
 .lightbox-panel { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto; width: min(100%, 1200px); height: min(100%, 840px); gap: 1rem; }
-.lightbox-image-wrap { position: relative; grid-row: 1 / -1; display: grid; min-width: 0; min-height: 0; place-items: center; overflow: hidden; touch-action: pan-y; }
-.lightbox-image { display: block; max-width: 100%; max-height: 100%; object-fit: contain; animation: image-in .35s var(--ease-out) both; }
+.lightbox-image-wrap { position: relative; grid-row: 1 / -1; display: grid; min-width: 0; min-height: 0; place-items: center; overflow: hidden; touch-action: none; }
+.lightbox-image-wrap.is-zoomed { cursor: grab; }
+.lightbox-image-wrap.is-zoomed:active { cursor: grabbing; }
+.lightbox-image { user-select: none; -webkit-user-drag: none; display: block; max-width: 100%; max-height: 100%; object-fit: contain; animation: image-in .35s var(--ease-out) both; }
 @keyframes image-in { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
 .lightbox-side { display: flex; width: clamp(9rem, 20vw, 15rem); min-height: 0; max-height: 100%; flex-direction: column; gap: .8rem; padding-bottom: .15rem; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; color: var(--white); }
 /* Rata bawah jika ada ruang, tetapi mulai dari atas dan bisa digulir jika isinya lebih tinggi dari layar.

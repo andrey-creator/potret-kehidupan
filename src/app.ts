@@ -59,6 +59,7 @@ const gallery = document.querySelector<HTMLElement>("#gallery");
 const featured = document.querySelector<HTMLElement>("#featured");
 const loading = document.querySelector<HTMLElement>("#galleryLoading");
 const galleryCount = document.querySelector<HTMLElement>("#galleryCount");
+const albumTabs = document.querySelector<HTMLElement>("#albumTabs");
 const filtersBox = document.querySelector<HTMLElement>("#galleryFilters");
 const filterLocation = document.querySelector<HTMLSelectElement>("#filterLocation");
 const filterYear = document.querySelector<HTMLSelectElement>("#filterYear");
@@ -113,6 +114,7 @@ function pickText(base: string, english: string | null | undefined): string {
 const captionOf = (item: Photo): string => pickText(item.caption, item.caption_en);
 const altOf = (item: Photo): string => pickText(item.alt, item.alt_en);
 const locationOf = (item: Photo): string => pickText(item.location ?? "", item.location_en).trim();
+const albumOf = (item: Photo): string => pickText(item.album ?? "", item.album_en).trim();
 const storyOf = (item: Photo): string => pickText(item.story ?? "", item.story_en).replace(/\s+/g, " ").trim();
 const photoUrl = (id: number): string => (lang === "en" ? `/en/photo/${id}` : `/foto/${id}`);
 
@@ -318,17 +320,18 @@ function sortPhotos(list: Photo[], order: Order): Photo[] {
     .map(({ item }) => item);
 }
 
-const filters = { location: "", year: "" };
+const filters = { location: "", year: "", album: "" };
 let gridIndices: number[] = []; // foto yang tampil di grid (setelah filter)
 let navIndices: number[] = []; // foto yang dilalui lightbox (setelah filter)
 const navPosition = new Map<number, number>();
 
-const isFiltering = (): boolean => filters.location !== "" || filters.year !== "";
+const isFiltering = (): boolean => filters.location !== "" || filters.year !== "" || filters.album !== "";
 const yearOf = (item: Photo): string => /^(\d{4})/.exec(item.taken_at ?? "")?.[1] ?? "";
 
 function matchesFilters(item: Photo): boolean {
   if (filters.location && locationOf(item).toLowerCase() !== filters.location) return false;
   if (filters.year && yearOf(item) !== filters.year) return false;
+  if (filters.album && albumOf(item).toLowerCase() !== filters.album) return false;
   return true;
 }
 
@@ -427,8 +430,50 @@ function setupFilters(): void {
   filterReset?.addEventListener("click", () => {
     filterLocation.value = "";
     filterYear.value = "";
+    filters.album = "";
+    syncAlbumTabs();
     changed();
   });
+}
+
+function syncAlbumTabs(): void {
+  albumTabs?.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
+    button.setAttribute("aria-pressed", String((button.dataset.album ?? "") === filters.album));
+  });
+}
+
+/** Tab album di atas galeri; hanya muncul jika ada foto yang punya album. */
+function setupAlbums(): void {
+  if (!albumTabs) return;
+  const albums = new Map<string, string>();
+  photos.forEach((item) => {
+    const name = albumOf(item);
+    if (name && !albums.has(name.toLowerCase())) albums.set(name.toLowerCase(), name);
+  });
+  if (albums.size === 0) {
+    albumTabs.hidden = true;
+    return;
+  }
+  const entries: [string, string][] = [["", TEXT.all], ...[...albums].sort((a, b) => a[1].localeCompare(b[1]))];
+  albumTabs.textContent = "";
+  entries.forEach(([value, label]) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "album-tab";
+    button.dataset.album = value;
+    button.textContent = label;
+    albumTabs.append(button);
+  });
+  albumTabs.hidden = false;
+  albumTabs.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-album]");
+    if (!button) return;
+    filters.album = button.dataset.album ?? "";
+    syncAlbumTabs();
+    if (filterReset) filterReset.hidden = !isFiltering();
+    applyView();
+  });
+  syncAlbumTabs();
 }
 
 function renderGallery(): void {
@@ -441,6 +486,7 @@ function renderGallery(): void {
     observeReveal(cards);
     observeParallax(cards);
   };
+  setupAlbums();
   setupFilters();
   applyView();
   if (slideshowStart) slideshowStart.hidden = photos.length < 2 || typeof bootstrap === "undefined";
@@ -529,6 +575,7 @@ function showLightbox(index: number, trigger?: HTMLElement | null): void {
   if (!lightboxOpen) opener = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
   activeIndex = wrapped;
   const item = photos[activeIndex];
+  resetZoom();
   lightboxImage.src = item.src;
   lightboxImage.alt = altOf(item);
   lightboxCaption.textContent = captionOf(item);
@@ -668,6 +715,162 @@ function stopSlideshow(): void {
   lightboxProgress?.classList.remove("is-running");
 }
 
+// ---------- Zoom di lightbox ----------
+// Ketuk dua kali, roda mouse / cubit di trackpad, cubit dua jari, atau tombol + - 0. Geser untuk melihat bagian lain.
+// Memakai properti `scale` dan `translate` (bukan `transform`) agar tidak bentrok dengan animasi masuk foto.
+
+const MAX_ZOOM = 5;
+const DOUBLE_TAP_ZOOM = 2.5;
+const zoom = { scale: 1, x: 0, y: 0 };
+const pointers = new Map<number, { x: number; y: number }>();
+let pinchDistance = 0;
+let dragMoved = false;
+let tapStart: { time: number; x: number; y: number } | null = null;
+let lastTap: { time: number; x: number; y: number } | null = null;
+
+function applyZoom(): void {
+  if (!lightboxImage) return;
+  const zoomed = zoom.scale > 1;
+  lightboxImage.style.setProperty("scale", zoomed ? String(zoom.scale) : "");
+  lightboxImage.style.setProperty("translate", zoomed ? `${zoom.x}px ${zoom.y}px` : "");
+  lightboxBackdrop?.classList.toggle("is-zoomed", zoomed);
+}
+
+function resetZoom(): void {
+  zoom.scale = 1;
+  zoom.x = 0;
+  zoom.y = 0;
+  pointers.clear();
+  pinchDistance = 0;
+  tapStart = null;
+  applyZoom();
+}
+
+/** Menjaga foto tidak bisa digeser keluar dari bingkai. */
+function clampZoom(): void {
+  if (!lightboxImage || !lightboxBackdrop) return;
+  const maxX = Math.max(0, (lightboxImage.offsetWidth * zoom.scale - lightboxBackdrop.clientWidth) / 2);
+  const maxY = Math.max(0, (lightboxImage.offsetHeight * zoom.scale - lightboxBackdrop.clientHeight) / 2);
+  zoom.x = Math.max(-maxX, Math.min(maxX, zoom.x));
+  zoom.y = Math.max(-maxY, Math.min(maxY, zoom.y));
+}
+
+/** Mengubah skala dengan titik (clientX, clientY) tetap berada di bawah jari / kursor. */
+function zoomAt(nextScale: number, clientX: number, clientY: number): void {
+  if (!lightboxBackdrop) return;
+  const scale = Math.max(1, Math.min(MAX_ZOOM, nextScale));
+  if (scale <= 1.001) {
+    zoom.scale = 1;
+    zoom.x = 0;
+    zoom.y = 0;
+    applyZoom();
+    return;
+  }
+  const rect = lightboxBackdrop.getBoundingClientRect();
+  const px = clientX - (rect.left + rect.width / 2);
+  const py = clientY - (rect.top + rect.height / 2);
+  const ratio = scale / zoom.scale;
+  zoom.x = px - (px - zoom.x) * ratio;
+  zoom.y = py - (py - zoom.y) * ratio;
+  zoom.scale = scale;
+  clampZoom();
+  applyZoom();
+}
+
+function zoomFromCenter(factor: number): void {
+  if (!lightboxBackdrop) return;
+  const rect = lightboxBackdrop.getBoundingClientRect();
+  zoomAt(zoom.scale * factor, rect.left + rect.width / 2, rect.top + rect.height / 2);
+}
+
+const pinchPoints = (): [{ x: number; y: number }, { x: number; y: number }] => {
+  const [first, second] = [...pointers.values()];
+  return [first, second];
+};
+const pinchSpan = (): number => {
+  const [a, b] = pinchPoints();
+  return Math.hypot(a.x - b.x, a.y - b.y);
+};
+const pinchCenter = (): { x: number; y: number } => {
+  const [a, b] = pinchPoints();
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+};
+
+if (lightboxImage) lightboxImage.draggable = false;
+
+lightboxBackdrop?.addEventListener("pointerdown", (event) => {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (pointers.size === 1) {
+    dragMoved = false;
+    tapStart = { time: performance.now(), x: event.clientX, y: event.clientY };
+  } else if (pointers.size === 2) {
+    pinchDistance = pinchSpan();
+    tapStart = null;
+    dragMoved = true;
+  }
+});
+
+lightboxBackdrop?.addEventListener("pointermove", (event) => {
+  const previous = pointers.get(event.pointerId);
+  if (!previous) return;
+  const current = { x: event.clientX, y: event.clientY };
+  // Pointer capture hanya dipakai saat menggeser atau mencubit. Jika dipakai sejak ketukan, browser mengarahkan
+  // "click" ke bingkai dan satu ketukan di foto akan menutup lightbox.
+  const target = event.currentTarget as HTMLElement;
+  if ((zoom.scale > 1 || pointers.size === 2) && !target.hasPointerCapture(event.pointerId)) target.setPointerCapture(event.pointerId);
+  if (pointers.size === 2) {
+    const before = pinchCenter();
+    pointers.set(event.pointerId, current);
+    const after = pinchCenter();
+    const span = pinchSpan();
+    if (zoom.scale > 1) {
+      zoom.x += after.x - before.x;
+      zoom.y += after.y - before.y;
+    }
+    if (pinchDistance > 0) zoomAt(zoom.scale * (span / pinchDistance), after.x, after.y);
+    pinchDistance = span;
+    return;
+  }
+  pointers.set(event.pointerId, current);
+  if (tapStart && Math.hypot(current.x - tapStart.x, current.y - tapStart.y) > 6) dragMoved = true;
+  if (zoom.scale > 1) {
+    zoom.x += current.x - previous.x;
+    zoom.y += current.y - previous.y;
+    clampZoom();
+    applyZoom();
+  }
+});
+
+function endPointer(event: PointerEvent): void {
+  if (!pointers.delete(event.pointerId)) return;
+  pinchDistance = 0;
+  if (pointers.size > 0) return;
+  const start = tapStart;
+  tapStart = null;
+  if (event.type !== "pointerup" || !start || dragMoved) return;
+  const now = performance.now();
+  if (now - start.time > 300) return;
+  if (lastTap && now - lastTap.time < 350 && Math.hypot(event.clientX - lastTap.x, event.clientY - lastTap.y) < 30) {
+    lastTap = null;
+    zoomAt(zoom.scale > 1 ? 1 : DOUBLE_TAP_ZOOM, event.clientX, event.clientY);
+  } else {
+    lastTap = { time: now, x: event.clientX, y: event.clientY };
+  }
+}
+lightboxBackdrop?.addEventListener("pointerup", endPointer);
+lightboxBackdrop?.addEventListener("pointercancel", endPointer);
+
+// Klik setelah menggeser foto tidak boleh menutup lightbox.
+lightboxBackdrop?.addEventListener("click", (event) => {
+  if (dragMoved) event.stopPropagation();
+}, true);
+
+lightboxBackdrop?.addEventListener("wheel", (event) => {
+  event.preventDefault();
+  zoomAt(zoom.scale * Math.exp(-event.deltaY * 0.0015), event.clientX, event.clientY);
+}, { passive: false });
+
 // ---------- Geser di layar sentuh ----------
 
 const SWIPE_DISTANCE = 50;
@@ -684,6 +887,7 @@ lightboxBackdrop?.addEventListener("touchend", (event) => {
   const dx = touch.clientX - touchStart.x;
   const dy = touch.clientY - touchStart.y;
   touchStart = null;
+  if (zoom.scale > 1) return; // saat diperbesar, geser dipakai untuk menggeser foto
   if (Math.abs(dx) >= SWIPE_DISTANCE && Math.abs(dx) > Math.abs(dy) * 1.5) moveLightbox(dx < 0 ? 1 : -1);
 }, { passive: true });
 
@@ -711,8 +915,22 @@ async function loadSettings(): Promise<{ pageSize: number; order: Order }> {
   }
 }
 
+type AlbumMap = Record<string, { album?: string; album_en?: string | null }>;
+
+/** Album per foto (id foto -> nama album). Gagal dimuat = galeri tampil tanpa tab album. */
+async function loadAlbums(): Promise<AlbumMap> {
+  try {
+    const response = await fetch("/api/albums", { headers: { Accept: "application/json" } });
+    if (!response.ok) return {};
+    const data: unknown = await response.json();
+    return data && typeof data === "object" ? data as AlbumMap : {};
+  } catch {
+    return {};
+  }
+}
+
 async function loadPhotos(): Promise<void> {
-  const settings = await loadSettings();
+  const [settings, albums] = await Promise.all([loadSettings(), loadAlbums()]);
   pageSize = settings.pageSize;
   try {
     const response = await fetch("/api/photos", { headers: { Accept: "application/json" } });
@@ -735,6 +953,13 @@ async function loadPhotos(): Promise<void> {
       return;
     }
   }
+  photos.forEach((item) => {
+    const entry = item.id === undefined ? undefined : albums[String(item.id)];
+    if (entry?.album) {
+      item.album = entry.album;
+      item.album_en = entry.album_en ?? null;
+    }
+  });
   photos = sortPhotos(photos, settings.order);
   renderGallery();
   openFromHash();
@@ -767,6 +992,7 @@ lightbox?.addEventListener("shown.bs.modal", () => lightboxClose?.focus());
 lightbox?.addEventListener("hide.bs.modal", stopSlideshow);
 lightbox?.addEventListener("hidden.bs.modal", () => {
   lightboxOpen = false;
+  resetZoom();
   clearPhotoHash();
   if (lightboxImage) lightboxImage.src = "";
   restoreFocus();
@@ -775,6 +1001,9 @@ document.addEventListener("keydown", (event) => {
   if (!lightboxOpen) return;
   if (event.key === "ArrowLeft") moveLightbox(-1);
   if (event.key === "ArrowRight") moveLightbox(1);
+  if (event.key === "+" || event.key === "=") zoomFromCenter(1.4);
+  if (event.key === "-") zoomFromCenter(1 / 1.4);
+  if (event.key === "0") resetZoom();
 });
 window.addEventListener("hashchange", () => {
   const index = indexFromHash();
