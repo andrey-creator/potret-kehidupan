@@ -38,6 +38,10 @@ const TEXT = {
     galleryLabel: "Galeri foto Potret Kehidupan",
     loading: "Memuat momen…",
     loadMore: "Muat lebih banyak",
+    filterLabel: "Saring galeri",
+    filterLocation: "Lokasi",
+    filterYear: "Tahun",
+    filterReset: "Atur ulang",
     footerLinks: "Tautan media sosial",
     lightboxLabel: "Tampilan foto besar",
     close: "Tutup tampilan foto",
@@ -77,6 +81,10 @@ const TEXT = {
     galleryLabel: "Potret Kehidupan photo gallery",
     loading: "Loading moments…",
     loadMore: "Load more",
+    filterLabel: "Filter gallery",
+    filterLocation: "Location",
+    filterYear: "Year",
+    filterReset: "Reset",
     footerLinks: "Social media links",
     lightboxLabel: "Enlarged photo view",
     close: "Close photo view",
@@ -168,6 +176,11 @@ function page(t) {
         <p class="mb-0" aria-hidden="true"><span id="galleryCount">—</span> ${t.headingCountSuffix}</p>
         <button class="btn btn-ink btn-slideshow" id="slideshowStart" type="button" hidden><i class="bi bi-play-fill me-1" aria-hidden="true"></i>${t.slideshow}</button>
       </div>
+    </div>
+    <div class="gallery-filters" id="galleryFilters" role="group" aria-label="${t.filterLabel}" hidden>
+      <label class="filter"><span>${t.filterLocation}</span><select id="filterLocation" class="form-select form-select-sm rounded-0"></select></label>
+      <label class="filter"><span>${t.filterYear}</span><select id="filterYear" class="form-select form-select-sm rounded-0"></select></label>
+      <button class="btn btn-ink" id="filterReset" type="button" hidden>${t.filterReset}</button>
     </div>
     <section class="gallery" id="gallery" aria-label="${t.galleryLabel}">
       <div class="gallery-loading" id="galleryLoading" role="status">${t.loading}</div>

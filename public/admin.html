@@ -105,6 +105,32 @@
       </div>
     </section>
 
+    <section class="card shadow-sm mb-4" id="prefsCard">
+      <div class="card-body">
+        <h2 class="h5">Tampilan galeri</h2>
+        <p class="small text-body-secondary">Atur berapa foto yang tampil sebelum tombol “Muat lebih banyak”, dan urutan foto di situs.</p>
+        <div class="row g-3">
+          <div class="col-sm-4">
+            <label for="pageSize" class="form-label small">Foto per halaman</label>
+            <input id="pageSize" type="number" class="form-control" min="1" max="100" step="1" inputmode="numeric">
+            <div class="form-text">Angka 1–100, tidak termasuk foto unggulan di header.</div>
+          </div>
+          <div class="col-sm-8">
+            <label for="galleryOrder" class="form-label small">Urutan foto</label>
+            <select id="galleryOrder" class="form-select">
+              <option value="default">Sesuai urutan manual di bawah (← Maju / Mundur →)</option>
+              <option value="newest">Terbaru dulu (menurut tanggal foto)</option>
+              <option value="oldest">Terlama dulu (menurut tanggal foto)</option>
+              <option value="random">Acak setiap halaman dibuka</option>
+            </select>
+            <div class="form-text">Selain “urutan manual”, foto unggulan (★) mengikuti urutan terpilih. Foto tanpa tanggal selalu di akhir.</div>
+          </div>
+        </div>
+        <button id="prefsSave" class="btn btn-primary btn-sm mt-3" type="button">Simpan pengaturan</button>
+        <div id="prefsMsg" class="d-none" role="status"></div>
+      </div>
+    </section>
+
     <section class="card shadow-sm">
       <div class="card-body">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
@@ -258,6 +284,7 @@
     $("logoutBtn").hidden = false;
     loadGallery();
     loadIntro();
+    loadPrefs();
     return true;
   }
 
@@ -1107,6 +1134,47 @@
     say($("introMsg"), "Teks bawaan dimuat. Tekan Simpan teks untuk menerapkannya.");
   }
 
+  // ---------- Tampilan galeri (jumlah foto per halaman + urutan) ----------
+  async function loadPrefs() {
+    try {
+      var res = await fetch("/api/settings?_=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) throw new Error(await errorText(res));
+      var data = await res.json();
+      $("pageSize").min = data.min;
+      $("pageSize").max = data.max;
+      $("pageSize").value = data.gallery_page_size;
+      $("galleryOrder").value = data.gallery_order;
+    } catch (e) {
+      say($("prefsMsg"), "Gagal memuat pengaturan galeri: " + e.message, "err");
+    }
+  }
+
+  async function savePrefs() {
+    var input = $("pageSize");
+    var size = Number(input.value);
+    var min = Number(input.min) || 1, max = Number(input.max) || 100;
+    if (!Number.isInteger(size) || size < min || size > max) {
+      say($("prefsMsg"), "Foto per halaman: isi angka bulat " + min + "–" + max + ".", "err");
+      return;
+    }
+    var headers = authHeaders();
+    headers["Content-Type"] = "application/json";
+    $("prefsSave").disabled = true;
+    say($("prefsMsg"), "Menyimpan…");
+    try {
+      var res = await fetch("/api/settings", { method: "PUT", headers: headers, body: JSON.stringify({ gallery_page_size: size, gallery_order: $("galleryOrder").value }) });
+      if (!res.ok) throw new Error(await errorText(res));
+      var data = await res.json();
+      $("pageSize").value = data.gallery_page_size;
+      $("galleryOrder").value = data.gallery_order;
+      say($("prefsMsg"), "Pengaturan disimpan. Perubahan langsung berlaku saat galeri dimuat ulang.", "ok");
+    } catch (e) {
+      say($("prefsMsg"), "Gagal menyimpan: " + e.message, "err");
+    } finally {
+      $("prefsSave").disabled = false;
+    }
+  }
+
   // ---------- Wire up ----------
   $("loginBtn").addEventListener("click", function () {
     var value = $("token").value.trim();
@@ -1125,6 +1193,7 @@
   COUNTER_IDS.forEach(function (id) { $(id).addEventListener("input", function () { updateCounter(id); }); });
   $("introSave").addEventListener("click", saveIntro);
   $("introReset").addEventListener("click", resetIntro);
+  $("prefsSave").addEventListener("click", savePrefs);
   // Bootstrap menutup modal lewat tombol X, Batal, Esc, atau klik di luar; bersihkan status di sini.
   $("editModal").addEventListener("shown.bs.modal", function () { $("editCaption").focus(); });
   $("editModal").addEventListener("hidden.bs.modal", function () { resetEditFile(); editing = null; });

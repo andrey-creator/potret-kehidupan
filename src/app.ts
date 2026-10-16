@@ -27,7 +27,9 @@ const TEXT = {
     copied: "Tautan disalin.",
     copyManually: "Salin dari kolom alamat browser.",
     loadMore: "Muat lebih banyak",
-    shown: (shown: number, total: number) => `Menampilkan ${shown} dari ${total} momen`
+    shown: (shown: number, total: number) => `Menampilkan ${shown} dari ${total} momen`,
+    all: "Semua",
+    noMatch: "Tidak ada momen yang cocok dengan filter ini."
   },
   en: {
     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
@@ -41,7 +43,9 @@ const TEXT = {
     copied: "Link copied.",
     copyManually: "Copy it from the browser address bar.",
     loadMore: "Load more",
-    shown: (shown: number, total: number) => `Showing ${shown} of ${total} moments`
+    shown: (shown: number, total: number) => `Showing ${shown} of ${total} moments`,
+    all: "All",
+    noMatch: "No moments match these filters."
   }
 }[lang];
 
@@ -55,6 +59,10 @@ const gallery = document.querySelector<HTMLElement>("#gallery");
 const featured = document.querySelector<HTMLElement>("#featured");
 const loading = document.querySelector<HTMLElement>("#galleryLoading");
 const galleryCount = document.querySelector<HTMLElement>("#galleryCount");
+const filtersBox = document.querySelector<HTMLElement>("#galleryFilters");
+const filterLocation = document.querySelector<HTMLSelectElement>("#filterLocation");
+const filterYear = document.querySelector<HTMLSelectElement>("#filterYear");
+const filterReset = document.querySelector<HTMLButtonElement>("#filterReset");
 const loadMoreWrap = document.querySelector<HTMLElement>("#loadMoreWrap");
 const loadMoreButton = document.querySelector<HTMLButtonElement>("#loadMore");
 const loadMoreStatus = document.querySelector<HTMLElement>("#loadMoreStatus");
@@ -81,7 +89,7 @@ const shareToastText = document.querySelector<HTMLElement>("#shareToastText");
 
 let photos: Photo[] = [];
 let pageSize = DEFAULT_PAGE_SIZE;
-let renderedUntil = 0; // indeks foto (eksklusif) yang sudah dirender di galeri
+let renderedUntil = 0; // jumlah kartu di grid yang sudah dirender
 let appendCards: (cards: HTMLElement[]) => void = () => {};
 let activeIndex = 0;
 let lightboxOpen = false;
@@ -166,14 +174,15 @@ function renderMessage(text: string, count: string): void {
   gallery.innerHTML = `<p class="gallery-loading" role="status">${escapeHtml(text)}</p>`;
 }
 
-function renderCard(item: Photo, index: number): string {
+/** `index` = posisi di daftar lengkap (untuk lightbox); `position` = urutan kartu di grid. */
+function renderCard(item: Photo, index: number, position: number): string {
   const meta = metaSpans(item)
     .map((part) => `<span><i class="bi ${part.icon}" aria-hidden="true"></i> ${escapeHtml(part.text)}</span>`)
     .join("");
   return `
-    <article class="card gallery-card is-${item.size} border-0 rounded-0 bg-transparent" data-index="${index}" data-reveal="${REVEALS[index % REVEALS.length]}">
+    <article class="card gallery-card is-${item.size} border-0 rounded-0 bg-transparent" data-index="${index}" data-reveal="${REVEALS[position % REVEALS.length]}">
       <button class="photo-button" type="button" aria-label="${escapeHtml(TEXT.viewPhoto(captionOf(item)))}" data-index="${index}">
-        <img class="card-img-top rounded-0" src="${escapeHtml(thumbSrc(item.src))}" alt="${escapeHtml(altOf(item))}"${ratioStyle(item)} loading="${index < 2 ? "eager" : "lazy"}" decoding="async">
+        <img class="card-img-top rounded-0" src="${escapeHtml(thumbSrc(item.src))}" alt="${escapeHtml(altOf(item))}"${ratioStyle(item)} loading="${position < 2 ? "eager" : "lazy"}" decoding="async">
         <span class="photo-overlay" aria-hidden="true">
           <span class="photo-overlay-caption">${escapeHtml(captionOf(item))}</span>
           <span class="photo-overlay-meta">${meta}</span>
@@ -182,7 +191,7 @@ function renderCard(item: Photo, index: number): string {
       </button>
       <div class="card-body px-0 pb-0 pt-3 d-sm-flex align-items-sm-baseline justify-content-sm-between gap-3 photo-caption">
         <p class="card-text mb-0">${escapeHtml(captionOf(item))}</p>
-        <span class="photo-number d-block d-sm-inline mt-1 mt-sm-0">${padNumber(index + 1)} / ${padNumber(photos.length)}</span>
+        <span class="photo-number d-block d-sm-inline mt-1 mt-sm-0">${padNumber((navPosition.get(index) ?? index) + 1)} / ${padNumber(navIndices.length || photos.length)}</span>
       </div>
     </article>
   `;
@@ -279,25 +288,77 @@ function createReveal(): (cards: HTMLElement[]) => void {
   };
 }
 
-/** Foto pertama tampil di header; galeri menampilkan sisanya (kecuali hanya ada satu foto). */
-const galleryOffset = (): number => (photos.length > 1 ? 1 : 0);
+// ---------- Urutan, filter, dan tampilan grid ----------
+
+type Order = "default" | "newest" | "oldest" | "random";
+const ORDERS: readonly string[] = ["default", "newest", "oldest", "random"];
+
+/** Mengurutkan foto sesuai pengaturan admin. "default" = urutan dari server. Foto tanpa tanggal selalu di akhir. */
+function sortPhotos(list: Photo[], order: Order): Photo[] {
+  if (order === "random") {
+    const copy = [...list];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+  if (order === "default") return list;
+  const sign = order === "oldest" ? 1 : -1;
+  return list
+    .map((item, position) => ({ item, position }))
+    .sort((a, b) => {
+      const x = a.item.taken_at ?? "";
+      const y = b.item.taken_at ?? "";
+      if (x && !y) return -1;
+      if (!x && y) return 1;
+      if (x && y && x !== y) return (x < y ? -1 : 1) * sign;
+      return a.position - b.position;
+    })
+    .map(({ item }) => item);
+}
+
+const filters = { location: "", year: "" };
+let gridIndices: number[] = []; // foto yang tampil di grid (setelah filter)
+let navIndices: number[] = []; // foto yang dilalui lightbox (setelah filter)
+const navPosition = new Map<number, number>();
+
+const isFiltering = (): boolean => filters.location !== "" || filters.year !== "";
+const yearOf = (item: Photo): string => /^(\d{4})/.exec(item.taken_at ?? "")?.[1] ?? "";
+
+function matchesFilters(item: Photo): boolean {
+  if (filters.location && locationOf(item).toLowerCase() !== filters.location) return false;
+  if (filters.year && yearOf(item) !== filters.year) return false;
+  return true;
+}
+
+function computeView(): void {
+  const matches = photos.flatMap((item, index) => (matchesFilters(item) ? [index] : []));
+  navIndices = matches;
+  // Tanpa filter, foto pertama sudah tampil di header sehingga grid dimulai dari foto kedua.
+  gridIndices = isFiltering() || photos.length < 2 ? matches : matches.slice(1);
+  navPosition.clear();
+  navIndices.forEach((photoIndex, position) => navPosition.set(photoIndex, position));
+}
 
 function updateLoadMore(): void {
   if (!loadMoreWrap || !loadMoreButton) return;
-  const shown = Math.max(renderedUntil, 1);
-  const hasMore = renderedUntil < photos.length;
-  loadMoreWrap.hidden = photos.length <= galleryOffset() + pageSize && !hasMore;
+  const hasMore = renderedUntil < gridIndices.length;
+  loadMoreWrap.hidden = gridIndices.length <= pageSize;
   loadMoreButton.hidden = !hasMore;
-  if (loadMoreStatus) loadMoreStatus.textContent = TEXT.shown(Math.min(shown, photos.length), photos.length);
+  if (loadMoreStatus) {
+    const featuredShown = !isFiltering() && photos.length > 1 ? 1 : 0;
+    loadMoreStatus.textContent = TEXT.shown(renderedUntil + featuredShown, navIndices.length);
+  }
 }
 
-/** Merender foto berikutnya (satu halaman) ke galeri. `focusFirst` memindahkan fokus ke kartu baru pertama. */
+/** Merender kartu berikutnya (satu halaman) ke grid. `focusFirst` memindahkan fokus ke kartu baru pertama. */
 function renderNextPage(focusFirst: boolean): void {
   if (!gallery) return;
   const from = renderedUntil;
-  const to = Math.min(from + pageSize, photos.length);
+  const to = Math.min(from + pageSize, gridIndices.length);
   if (to <= from) return;
-  const html = photos.slice(from, to).map((item, position) => renderCard(item, from + position)).join("");
+  const html = gridIndices.slice(from, to).map((photoIndex, offset) => renderCard(photos[photoIndex], photoIndex, from + offset)).join("");
   const template = document.createElement("template");
   template.innerHTML = html;
   const cards = Array.from(template.content.querySelectorAll<HTMLElement>(".gallery-card"));
@@ -305,25 +366,83 @@ function renderNextPage(focusFirst: boolean): void {
   renderedUntil = to;
   setupImageLoading(cards);
   appendCards(cards);
-  // Nomor "01 / 12" memakai jumlah total, jadi kartu lama tidak perlu dirender ulang.
   updateLoadMore();
-  if (focusFirst) cards[0]?.querySelector<HTMLButtonElement>(".photo-button")?.focus({ preventScroll: false });
+  if (focusFirst) cards[0]?.querySelector<HTMLButtonElement>(".photo-button")?.focus();
+}
+
+/** Menyusun ulang grid dari awal (saat pertama tampil atau filter berubah). */
+function applyView(): void {
+  if (!gallery || !galleryCount) return;
+  computeView();
+  galleryCount.textContent = String(navIndices.length);
+  gallery.innerHTML = "";
+  renderedUntil = 0;
+  if (gridIndices.length === 0) {
+    gallery.innerHTML = `<p class="gallery-loading" role="status">${escapeHtml(TEXT.noMatch)}</p>`;
+    updateLoadMore();
+    return;
+  }
+  renderNextPage(false);
+}
+
+function fillSelect(select: HTMLSelectElement, options: { value: string; label: string }[]): void {
+  select.textContent = "";
+  [{ value: "", label: TEXT.all }, ...options].forEach((option) => {
+    const element = document.createElement("option");
+    element.value = option.value;
+    element.textContent = option.label;
+    select.append(element);
+  });
+}
+
+/** Filter lokasi dan tahun dibuat dari data foto; kolom yang hanya punya satu pilihan disembunyikan. */
+function setupFilters(): void {
+  if (!filtersBox || !filterLocation || !filterYear) return;
+  const locations = new Map<string, string>();
+  const years = new Set<string>();
+  photos.forEach((item) => {
+    const place = locationOf(item);
+    if (place && !locations.has(place.toLowerCase())) locations.set(place.toLowerCase(), place);
+    const year = yearOf(item);
+    if (year) years.add(year);
+  });
+  fillSelect(filterLocation, [...locations].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label)));
+  fillSelect(filterYear, [...years].sort().reverse().map((year) => ({ value: year, label: year })));
+  const showLocation = locations.size >= 2;
+  const showYear = years.size >= 2;
+  const locationField = filterLocation.closest<HTMLElement>(".filter");
+  const yearField = filterYear.closest<HTMLElement>(".filter");
+  if (locationField) locationField.hidden = !showLocation;
+  if (yearField) yearField.hidden = !showYear;
+  filtersBox.hidden = !showLocation && !showYear;
+
+  const changed = (): void => {
+    filters.location = filterLocation.value;
+    filters.year = filterYear.value;
+    if (filterReset) filterReset.hidden = !isFiltering();
+    applyView();
+  };
+  filterLocation.addEventListener("change", changed);
+  filterYear.addEventListener("change", changed);
+  filterReset?.addEventListener("click", () => {
+    filterLocation.value = "";
+    filterYear.value = "";
+    changed();
+  });
 }
 
 function renderGallery(): void {
   if (!gallery || !galleryCount) return;
-  galleryCount.textContent = String(photos.length);
   if (loading) loading.remove();
   if (photos.length > 0) renderFeatured(photos[0]);
-  gallery.innerHTML = "";
-  renderedUntil = galleryOffset();
   const observeReveal = createReveal();
   const observeParallax = createParallax();
   appendCards = (cards) => {
     observeReveal(cards);
     observeParallax(cards);
   };
-  renderNextPage(false);
+  setupFilters();
+  applyView();
   if (slideshowStart) slideshowStart.hidden = photos.length < 2 || typeof bootstrap === "undefined";
 }
 
@@ -334,10 +453,17 @@ function getModal(): BsModal | null {
 }
 
 /** Memuat foto sebelum dan sesudah foto aktif agar perpindahan terasa instan. */
+/** Foto di sebelah `index`: mengikuti hasil filter jika foto itu termasuk di dalamnya, selain itu daftar lengkap. */
+function neighborOf(index: number, step: number): number {
+  const position = navPosition.get(index);
+  if (position !== undefined && navIndices.length > 0) return navIndices[(position + step + navIndices.length) % navIndices.length];
+  return (index + step + photos.length) % photos.length;
+}
+
 function preloadNeighbors(index: number): void {
   if (photos.length < 2) return;
-  [index + 1, index - 1].forEach((i) => {
-    const src = photos[(i + photos.length) % photos.length].src;
+  [neighborOf(index, 1), neighborOf(index, -1)].forEach((i) => {
+    const src = photos[i].src;
     if (preloaded.has(src)) return;
     const image = new Image();
     image.decoding = "async";
@@ -406,7 +532,11 @@ function showLightbox(index: number, trigger?: HTMLElement | null): void {
   lightboxImage.src = item.src;
   lightboxImage.alt = altOf(item);
   lightboxCaption.textContent = captionOf(item);
-  lightboxCount.textContent = `${padNumber(activeIndex + 1)} / ${padNumber(photos.length)}`;
+  const position = navPosition.get(activeIndex);
+  lightboxCount.textContent = position !== undefined
+    ? `${padNumber(position + 1)} / ${padNumber(navIndices.length)}`
+    : `${padNumber(activeIndex + 1)} / ${padNumber(photos.length)}`;
+  if (item.id) setPhotoHash(item.id);
   setMeta(item);
   setStory(item);
   if (lightboxLink) {
@@ -438,7 +568,39 @@ function closeLightbox(): void {
 }
 
 function moveLightbox(step: number): void {
-  showLightbox(activeIndex + step);
+  showLightbox(neighborOf(activeIndex, step));
+}
+
+// ---------- Tautan langsung ke foto (#foto-12 / #photo-12) ----------
+
+const HASH_PATTERN = /^#(?:foto|photo)-(\d+)$/;
+
+function setPhotoHash(id: number): void {
+  try {
+    history.replaceState(null, "", `#${lang === "en" ? "photo" : "foto"}-${id}`);
+  } catch {
+    // Abaikan: tautan langsung hanyalah kemudahan tambahan.
+  }
+}
+
+function clearPhotoHash(): void {
+  if (!HASH_PATTERN.test(location.hash)) return;
+  try {
+    history.replaceState(null, "", `${location.pathname}${location.search}`);
+  } catch {
+    // Abaikan.
+  }
+}
+
+/** Indeks foto dari hash di alamat, atau -1 jika tidak ada atau tidak ditemukan. */
+function indexFromHash(): number {
+  const match = HASH_PATTERN.exec(location.hash);
+  return match ? photos.findIndex((item) => item.id === Number(match[1])) : -1;
+}
+
+function openFromHash(): void {
+  const index = indexFromHash();
+  if (index >= 0) showLightbox(index);
 }
 
 async function shareCurrent(): Promise<void> {
@@ -534,21 +696,24 @@ async function loadDevPhotos(): Promise<Photo[]> {
   return fallbackPhotos;
 }
 
-/** Jumlah foto per halaman dari pengaturan admin; jika gagal dimuat, pakai nilai bawaan. */
-async function loadPageSize(): Promise<number> {
+/** Pengaturan dari admin (jumlah foto per halaman dan urutan); jika gagal dimuat, pakai nilai bawaan. */
+async function loadSettings(): Promise<{ pageSize: number; order: Order }> {
+  const fallback = { pageSize: DEFAULT_PAGE_SIZE, order: "default" as Order };
   try {
     const response = await fetch("/api/settings", { headers: { Accept: "application/json" } });
-    if (!response.ok) return DEFAULT_PAGE_SIZE;
-    const data = await response.json() as { gallery_page_size?: unknown };
-    const value = Math.floor(Number(data.gallery_page_size));
-    return Number.isFinite(value) && value >= MIN_PAGE_SIZE ? Math.min(value, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
+    if (!response.ok) return fallback;
+    const data = await response.json() as { gallery_page_size?: unknown; gallery_order?: unknown };
+    const size = Math.floor(Number(data.gallery_page_size));
+    const order = typeof data.gallery_order === "string" && ORDERS.includes(data.gallery_order) ? data.gallery_order as Order : "default";
+    return { pageSize: Number.isFinite(size) && size >= MIN_PAGE_SIZE ? Math.min(size, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE, order };
   } catch {
-    return DEFAULT_PAGE_SIZE;
+    return fallback;
   }
 }
 
 async function loadPhotos(): Promise<void> {
-  pageSize = await loadPageSize();
+  const settings = await loadSettings();
+  pageSize = settings.pageSize;
   try {
     const response = await fetch("/api/photos", { headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error(`API ${response.status}`);
@@ -570,7 +735,9 @@ async function loadPhotos(): Promise<void> {
       return;
     }
   }
+  photos = sortPhotos(photos, settings.order);
   renderGallery();
+  openFromHash();
 }
 
 featured?.addEventListener("click", (event) => {
@@ -583,7 +750,7 @@ gallery?.addEventListener("click", (event) => {
 });
 loadMoreButton?.addEventListener("click", () => renderNextPage(true));
 slideshowStart?.addEventListener("click", () => {
-  showLightbox(0, slideshowStart);
+  showLightbox(navIndices[0] ?? 0, slideshowStart);
   startSlideshow();
 });
 lightboxPrevious?.addEventListener("click", () => moveLightbox(-1));
@@ -600,6 +767,7 @@ lightbox?.addEventListener("shown.bs.modal", () => lightboxClose?.focus());
 lightbox?.addEventListener("hide.bs.modal", stopSlideshow);
 lightbox?.addEventListener("hidden.bs.modal", () => {
   lightboxOpen = false;
+  clearPhotoHash();
   if (lightboxImage) lightboxImage.src = "";
   restoreFocus();
 });
@@ -607,6 +775,14 @@ document.addEventListener("keydown", (event) => {
   if (!lightboxOpen) return;
   if (event.key === "ArrowLeft") moveLightbox(-1);
   if (event.key === "ArrowRight") moveLightbox(1);
+});
+window.addEventListener("hashchange", () => {
+  const index = indexFromHash();
+  if (index >= 0) {
+    if (!lightboxOpen || activeIndex !== index) showLightbox(index);
+  } else if (lightboxOpen && !HASH_PATTERN.test(location.hash)) {
+    closeLightbox();
+  }
 });
 document.addEventListener("visibilitychange", () => {
   if (playing) scheduleSlide();

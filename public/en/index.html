@@ -73,6 +73,11 @@
         <button class="btn btn-ink btn-slideshow" id="slideshowStart" type="button" hidden><i class="bi bi-play-fill me-1" aria-hidden="true"></i>Play slideshow</button>
       </div>
     </div>
+    <div class="gallery-filters" id="galleryFilters" role="group" aria-label="Filter gallery" hidden>
+      <label class="filter"><span>Location</span><select id="filterLocation" class="form-select form-select-sm rounded-0"></select></label>
+      <label class="filter"><span>Year</span><select id="filterYear" class="form-select form-select-sm rounded-0"></select></label>
+      <button class="btn btn-ink" id="filterReset" type="button" hidden>Reset</button>
+    </div>
     <section class="gallery" id="gallery" aria-label="Potret Kehidupan photo gallery">
       <div class="gallery-loading" id="galleryLoading" role="status">Loading moments…</div>
     </section>
