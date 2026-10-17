@@ -1,4 +1,4 @@
-import { isAdminRequest, type AdminEnv } from "../../_lib/auth";
+import { isAdminRequest, type AdminEnv } from "../../_lib/admin-token";
 import { cleanAlbumName, saveAlbum } from "../../_lib/albums";
 
 type Env = AdminEnv & { DB: D1Database };

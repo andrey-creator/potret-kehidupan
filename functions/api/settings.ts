@@ -1,5 +1,5 @@
-import { isAdminRequest, type AdminEnv } from "../_lib/auth";
-import { MAX_PAGE_SIZE, MIN_PAGE_SIZE, ORDERS, getSettings, parseOrder, parsePageSize, saveSettings, type GallerySettings } from "../_lib/settings";
+import { isAdminRequest, type AdminEnv } from "../_lib/admin-token";
+import { MAX_PAGE_SIZE, MIN_PAGE_SIZE, ORDERS, getSettings, parseOrder, parsePageSize, saveSettings, type GallerySettings } from "../_lib/gallery-settings";
 
 type Env = AdminEnv & { DB: D1Database };
 

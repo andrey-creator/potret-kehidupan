@@ -1,0 +1,25 @@
+CARA PASANG (3 langkah)
+
+LANGKAH 1 - Database (sekali saja)
+  Cloudflare -> Storage & databases -> D1 -> potret-kehidupan -> tab Console.
+  Buka file "1-TEMPEL-DI-D1-CONSOLE.sql", salin ISINYA (bukan nama file),
+  tempel di console, klik Execute. Kalau ditolak, jalankan satu perintah per kali.
+
+LANGKAH 2 - GitHub
+  Buka repositori andrey-creator/potret-kehidupan.
+  Salin semua folder di sini ke dalam repositori, di lokasi yang sama:
+    public/    src/    scripts/    functions/    migrations/
+  (Jangan salin file BACA-DULU.txt dan 1-TEMPEL-DI-D1-CONSOLE.sql.)
+  PENTING: file admin ada di  public/admin.html  (di dalam folder public).
+  Build Cloudflare gagal kalau file itu tidak ada di sana.
+  Lalu Commit changes.
+
+LANGKAH 3 - Cek
+  Di Cloudflare -> Deployments, deployment baru harus berstatus Success
+  dan kode commit-nya BERBEDA dari e0ffd86.
+  Lalu buka  /api/settings  : harus ada "gallery_order" di dalamnya.
+  Buka  /api/albums  : harus muncul {} (bukan 404).
+
+File yang SENGAJA tidak disertakan (sudah ada di repositori Anda):
+  scripts/build.mjs, package.json, tsconfig.json, wrangler.toml,
+  functions/_lib/photos.ts, functions/index.ts, dll.
