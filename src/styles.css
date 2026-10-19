@@ -285,3 +285,19 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
 .intro-companion { margin: 1rem 0 0; font-size: .9rem; color: var(--ink); }
 .intro-companion a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .intro-companion a:hover { color: var(--sage); }
+
+/* Tulisan terbaru dari Catatan Kehidupan (diisi server). */
+.writing-section { padding-bottom: clamp(4rem, 9vw, 8rem); }
+.writing-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; padding-bottom: .9rem; border-bottom: 1px solid var(--line); color: var(--muted); font-size: .67rem; letter-spacing: .15em; text-transform: uppercase; }
+.writing-heading h2 { margin: 0; color: inherit; font-size: inherit; font-weight: inherit; letter-spacing: inherit; }
+.writing-heading a { padding-bottom: .15rem; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; transition: border-color .25s ease; }
+.writing-heading a:hover { border-color: var(--ink); }
+.writing-list { margin: 0; padding: 0; list-style: none; }
+.writing-item { border-bottom: 1px solid var(--line); }
+.writing-link { display: grid; grid-template-columns: 9rem 1fr; gap: .4rem 2rem; padding: 1.4rem 0; color: var(--ink); text-decoration: none; }
+.writing-meta { color: var(--muted); font-size: .67rem; letter-spacing: .15em; line-height: 1.7; text-transform: uppercase; }
+.writing-title { margin: 0; font-size: clamp(1.15rem, 2vw, 1.55rem); font-weight: 400; letter-spacing: -.03em; line-height: 1.15; }
+.writing-excerpt { margin: .5rem 0 0; max-width: 42rem; color: #5d6059; font-size: .9rem; line-height: 1.5; }
+.writing-link:hover .writing-title { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.writing-link:focus-visible { outline: 2px solid var(--sage); outline-offset: 4px; }
+@media (max-width: 700px) { .writing-link { grid-template-columns: 1fr; } }

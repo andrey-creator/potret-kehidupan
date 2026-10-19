@@ -90,6 +90,8 @@ Jurnal tulisan pendamping ada di proyek terpisah (`https://catatan-kehidupan.pag
 
 - navbar (menu **Tulisan** / **Writing**), baik di beranda (`scripts/generate-pages.mjs`) maupun halaman foto (`functions/_lib/navbar.ts`);
 - kalimat "Pendamping: Catatan Kehidupan" di bawah tombol beranda dan di footer;
+- bagian **Dari jurnal tulisan** di beranda: 3 tulisan terbaru, diambil di server dari `GET /api/latest?n=3` milik Catatan Kehidupan
+  (`functions/_lib/writing.ts`, disimpan di cache 5 menit). Jika Catatan tidak bisa dihubungi, bagian ini otomatis tersembunyi.
 - data terstruktur (JSON-LD Person + WebSite) di `functions/_lib/home.ts`, yang menautkan nama penulis dengan kedua situs dan akun sosialnya.
 
 Jika alamat Catatan Kehidupan berubah (mis. memakai domain sendiri), ganti `CATATAN` di `scripts/generate-pages.mjs`,

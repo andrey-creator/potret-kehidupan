@@ -206,6 +206,9 @@ function page(t) {
     </div>
   </main>
 
+  <!-- Tulisan terbaru dari Catatan Kehidupan diisi otomatis oleh ${t.injectedBy}; tetap tersembunyi jika tidak tersedia. -->
+  <section class="writing-section shell" id="writing" hidden></section>
+
   <footer class="site-footer shell">
     <div class="footer-rule"></div>
     <div class="footer-meta d-flex flex-column flex-sm-row align-items-start justify-content-between gap-3 pt-3">
