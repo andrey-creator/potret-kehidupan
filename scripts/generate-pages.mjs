@@ -10,6 +10,8 @@ const DEFAULTS = JSON.parse(readFileSync("config/site-text.json", "utf8"));
 
 const INSTAGRAM = "https://www.instagram.com/andreyson_hamilton_a";
 const YOUTUBE = "https://youtube.com/@aryasatyakeandre";
+// Jurnal tulisan pendamping (proyek terpisah). Samakan dengan functions/_lib/navbar.ts.
+const CATATAN = "https://catatan-kehidupan.pages.dev/";
 
 const TEXT = {
   id: {
@@ -24,6 +26,10 @@ const TEXT = {
     navLabel: "Navigasi utama",
     toggler: "Buka menu navigasi",
     navGallery: "Galeri",
+    navWriting: "Tulisan",
+    companionLead: "Pendamping:",
+    companionLink: "Catatan Kehidupan",
+    companionTail: ", jurnal tulisan saya.",
     langLabel: "Bahasa / Language",
     metaLeft: "Album pribadi",
     metaRight: "Jurnal visual · ",
@@ -68,6 +74,10 @@ const TEXT = {
     navLabel: "Main navigation",
     toggler: "Open navigation menu",
     navGallery: "Gallery",
+    navWriting: "Writing",
+    companionLead: "Companion:",
+    companionLink: "Catatan Kehidupan",
+    companionTail: ", my written journal (in Indonesian).",
     langLabel: "Bahasa / Language",
     metaLeft: "Personal album",
     metaRight: "Visual journal · ",
@@ -139,6 +149,7 @@ function page(t) {
       <div class="collapse navbar-collapse justify-content-md-end" id="siteNav">
         <ul class="navbar-nav align-items-md-center gap-md-4 pt-3 pt-md-0">
           <li class="nav-item"><a class="nav-link" href="#gallery"><i class="bi bi-images me-2" aria-hidden="true"></i>${t.navGallery}</a></li>
+          <li class="nav-item"><a class="nav-link" href="${CATATAN}" target="_blank" rel="noopener"><i class="bi bi-journal-text me-2" aria-hidden="true"></i>${t.navWriting}</a></li>
           <li class="nav-item"><a class="nav-link" href="${INSTAGRAM}" target="_blank" rel="noreferrer"><i class="bi bi-instagram me-2" aria-hidden="true"></i>Instagram</a></li>
           <li class="nav-item"><a class="nav-link" href="${YOUTUBE}" target="_blank" rel="noreferrer"><i class="bi bi-youtube me-2" aria-hidden="true"></i>YouTube</a></li>
           <li class="nav-item">
@@ -165,6 +176,7 @@ function page(t) {
         <!-- ${t.ledeComment} -->
         <p class="intro-lede">${t.lede}</p>
         <a class="btn btn-ink mt-4" href="#gallery">${t.more}<i class="bi bi-arrow-down ms-2" aria-hidden="true"></i></a>
+        <p class="intro-companion">${t.companionLead} <a href="${CATATAN}" target="_blank" rel="noopener">${t.companionLink}</a>${t.companionTail}</p>
       </div>
       <!-- ${t.featuredComment} -->
       <figure class="featured" id="featured" hidden></figure>
@@ -199,6 +211,7 @@ function page(t) {
     <div class="footer-meta d-flex flex-column flex-sm-row align-items-start justify-content-between gap-3 pt-3">
       <span class="footer-name">Aryasatya Keandre · <span id="footerYear">2026</span></span>
       <nav class="footer-links d-flex flex-wrap gap-3 justify-content-sm-end" aria-label="${t.footerLinks}">
+        <a class="social-link" href="${CATATAN}" target="_blank" rel="noopener"><i class="bi bi-journal-text me-1" aria-hidden="true"></i>Catatan Kehidupan</a>
         <a class="social-link" href="${INSTAGRAM}" target="_blank" rel="noreferrer"><i class="bi bi-instagram me-1" aria-hidden="true"></i>Instagram</a>
         <a class="social-link" href="${YOUTUBE}" target="_blank" rel="noreferrer"><i class="bi bi-youtube me-1" aria-hidden="true"></i>YouTube</a>
       </nav>

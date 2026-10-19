@@ -4,6 +4,7 @@
 
 import { alternateLinks, homePath, Lang, pick } from "./i18n";
 import { homeTexts } from "./site";
+import { CATATAN_URL, INSTAGRAM_URL, YOUTUBE_URL } from "./navbar";
 
 type Env = {
   DB?: D1Database;
@@ -47,6 +48,22 @@ export async function serveHome(request: Request, env: Env, next: () => Promise<
     alternateLinks(origin, homePath("id"), homePath("en")),
     `<meta property="og:url" content="${url}">`
   ];
+
+  // Data terstruktur: menghubungkan nama penulis dengan Potret Kehidupan, Catatan Kehidupan, dan akun sosialnya.
+  const ld = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Person",
+        name: "Aryasatya Keandre Ramadhan",
+        alternateName: "Aryasatya Keandre",
+        url: CATATAN_URL,
+        sameAs: [CATATAN_URL, `${origin}/`, INSTAGRAM_URL, YOUTUBE_URL]
+      },
+      { "@type": "WebSite", name: "Potret Kehidupan", url: `${origin}/`, inLanguage: lang, author: { "@type": "Person", name: "Aryasatya Keandre Ramadhan" } }
+    ]
+  };
+  tags.push(`<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`);
 
   const cover = env.DB ? await firstPhoto(env.DB) : null;
   if (cover) {

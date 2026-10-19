@@ -84,3 +84,13 @@ npx wrangler d1 migrations apply potret-kehidupan --local
 npm run dev                            # http://127.0.0.1:8788
 ```
 
+## Terhubung dengan Catatan Kehidupan
+
+Jurnal tulisan pendamping ada di proyek terpisah (`https://catatan-kehidupan.pages.dev/`). Tautannya terpasang di:
+
+- navbar (menu **Tulisan** / **Writing**), baik di beranda (`scripts/generate-pages.mjs`) maupun halaman foto (`functions/_lib/navbar.ts`);
+- kalimat "Pendamping: Catatan Kehidupan" di bawah tombol beranda dan di footer;
+- data terstruktur (JSON-LD Person + WebSite) di `functions/_lib/home.ts`, yang menautkan nama penulis dengan kedua situs dan akun sosialnya.
+
+Jika alamat Catatan Kehidupan berubah (mis. memakai domain sendiri), ganti `CATATAN` di `scripts/generate-pages.mjs`,
+`CATATAN_URL` di `functions/_lib/navbar.ts`, lalu jalankan `npm run generate:pages`.

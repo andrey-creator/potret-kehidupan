@@ -1,13 +1,16 @@
 <!doctype html>
+<!-- File ini dibuat oleh scripts/generate-pages.mjs (satu templat untuk versi Indonesia dan Inggris).
+     Ubah teks atau struktur di skrip itu, lalu jalankan: npm run generate:pages -->
 <html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Potret Kehidupan — kepingan hidup dalam gambar — Aryasatya Keandre Ramadhan">
+  <meta name="description" content="Potret Kehidupan — kepingan hidup dalam gambar.">
   <meta name="theme-color" content="#f1eee8">
-  <title>Potret Kehidupan — kepingan hidup dalam gambar — Aryasatya Keandre Ramadhan</title>
+  <title>Potret Kehidupan — Kepingan hidup dalam gambar.</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- og:image, og:url, canonical, dan hreflang disisipkan otomatis oleh functions/index.ts dari foto unggulan. -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Potret Kehidupan">
   <meta property="og:title" content="Potret Kehidupan">
@@ -30,6 +33,7 @@
       <div class="collapse navbar-collapse justify-content-md-end" id="siteNav">
         <ul class="navbar-nav align-items-md-center gap-md-4 pt-3 pt-md-0">
           <li class="nav-item"><a class="nav-link" href="#gallery"><i class="bi bi-images me-2" aria-hidden="true"></i>Galeri</a></li>
+          <li class="nav-item"><a class="nav-link" href="https://catatan-kehidupan.pages.dev/" target="_blank" rel="noopener"><i class="bi bi-journal-text me-2" aria-hidden="true"></i>Tulisan</a></li>
           <li class="nav-item"><a class="nav-link" href="https://www.instagram.com/andreyson_hamilton_a" target="_blank" rel="noreferrer"><i class="bi bi-instagram me-2" aria-hidden="true"></i>Instagram</a></li>
           <li class="nav-item"><a class="nav-link" href="https://youtube.com/@aryasatyakeandre" target="_blank" rel="noreferrer"><i class="bi bi-youtube me-2" aria-hidden="true"></i>YouTube</a></li>
           <li class="nav-item">
@@ -56,6 +60,7 @@
         <!-- Teks bawaan kalimat pembuka dan paragraf pengantar: config/site-text.json. Bisa diubah dari halaman /admin tanpa deploy. -->
         <p class="intro-lede">Kumpulan potret dari hari-hari yang berjalan biasa: wajah, tempat, dan cahaya yang ingin saya ingat. Setiap foto adalah satu kepingan cerita. Klik sebuah foto untuk melihatnya lebih besar.</p>
         <a class="btn btn-ink mt-4" href="#gallery">Lihat semua momen<i class="bi bi-arrow-down ms-2" aria-hidden="true"></i></a>
+        <p class="intro-companion">Pendamping: <a href="https://catatan-kehidupan.pages.dev/" target="_blank" rel="noopener">Catatan Kehidupan</a>, jurnal tulisan saya.</p>
       </div>
       <!-- Foto unggulan diisi otomatis dari foto pertama di galeri. -->
       <figure class="featured" id="featured" hidden></figure>
@@ -90,6 +95,7 @@
     <div class="footer-meta d-flex flex-column flex-sm-row align-items-start justify-content-between gap-3 pt-3">
       <span class="footer-name">Aryasatya Keandre · <span id="footerYear">2026</span></span>
       <nav class="footer-links d-flex flex-wrap gap-3 justify-content-sm-end" aria-label="Tautan media sosial">
+        <a class="social-link" href="https://catatan-kehidupan.pages.dev/" target="_blank" rel="noopener"><i class="bi bi-journal-text me-1" aria-hidden="true"></i>Catatan Kehidupan</a>
         <a class="social-link" href="https://www.instagram.com/andreyson_hamilton_a" target="_blank" rel="noreferrer"><i class="bi bi-instagram me-1" aria-hidden="true"></i>Instagram</a>
         <a class="social-link" href="https://youtube.com/@aryasatyakeandre" target="_blank" rel="noreferrer"><i class="bi bi-youtube me-1" aria-hidden="true"></i>YouTube</a>
       </nav>

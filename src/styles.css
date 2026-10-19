@@ -282,3 +282,6 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
   .photo-overlay { transform: none; }
   .gallery-card:hover .photo-number, .gallery-card:focus-within .photo-number { transform: none; }
 }
+.intro-companion { margin: 1rem 0 0; font-size: .9rem; color: var(--ink); }
+.intro-companion a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.intro-companion a:hover { color: var(--sage); }
