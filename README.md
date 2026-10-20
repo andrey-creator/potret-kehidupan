@@ -96,3 +96,11 @@ Jurnal tulisan pendamping ada di proyek terpisah (`https://catatan-kehidupan.pag
 
 Jika alamat Catatan Kehidupan berubah (mis. memakai domain sendiri), ganti `CATATAN` di `scripts/generate-pages.mjs`,
 `CATATAN_URL` di `functions/_lib/navbar.ts`, lalu jalankan `npm run generate:pages`.
+
+## Tema
+
+Tombol "Tema" di navbar (dipasang oleh `src/theme.js`) membuat pembaca bisa memilih: Otomatis (mengikuti terang/gelap perangkat), Kertas, Sepia, Hutan, Laut, Senja, Malam, dan Tinta.
+Pilihan disimpan di browser pembaca. Warna tiap tema ada di `src/styles.css` bagian "1b. Tema"; seluruh warna situs memakai variabel
+`--bone --paper --ink --muted --line --sage --inv` (+ versi `-rgb`), jadi jangan menulis warna tetap baru di CSS. Gunakan `var(--…)`
+atau `color-mix(in srgb, var(--ink) 40%, transparent)`. Lightbox dan lapisan hover foto sengaja selalu gelap (memakai `--white`).
+Menambah tema: satu blok di CSS + satu entri di `theme.js`. Halaman `404.html` dan `/admin` tidak ikut tema.

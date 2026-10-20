@@ -12,6 +12,7 @@ copyFileSync("public/_headers", "dist/_headers");
 copyFileSync("public/favicon.svg", "dist/favicon.svg");
 copyFileSync("public/apple-touch-icon.png", "dist/apple-touch-icon.png");
 copyFileSync("src/styles.css", "dist/assets/styles.css");
+copyFileSync("src/theme.js", "dist/assets/theme.js");
 
 // Bootstrap di-host sendiri (versi dikunci di package.json), bukan dari CDN.
 copyFileSync("node_modules/bootstrap/dist/css/bootstrap.min.css", "dist/assets/vendor/bootstrap.min.css");

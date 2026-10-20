@@ -136,6 +136,7 @@ function page(t) {
   <link rel="stylesheet" href="/assets/vendor/bootstrap.min.css">
   <link rel="stylesheet" href="/assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/assets/styles.css">
+  <script src="/assets/theme.js"></script>
 </head>
 <body id="top">
   <a class="visually-hidden-focusable skip-link" href="#gallery">${t.skip}</a>

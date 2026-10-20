@@ -12,7 +12,12 @@
   --muted: #7a7d76;
   --line: rgba(32, 37, 33, 0.16);
   --sage: #7b8a78;
-  --white: #fff;
+  --inv: #fff; /* teks di atas warna --ink */
+  --ink-rgb: 32, 37, 33;
+  --bone-rgb: 241, 238, 232;
+  --muted-rgb: 122, 125, 118;
+  --sage-rgb: 123, 138, 120;
+  --white: #fff; /* putih mutlak: lightbox dan lapisan hover foto selalu gelap */
   --page-pad: clamp(1.25rem, 4vw, 4.5rem);
   --content-width: 1380px;
   --ease-out: cubic-bezier(0.2, 0.75, 0.25, 1);
@@ -21,22 +26,37 @@
   /* Bootstrap memakai warna, font, dan sudut milik situs ini. */
   --bs-body-font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   --bs-body-font-weight: 300;
-  --bs-body-color: #202521;
-  --bs-body-color-rgb: 32, 37, 33;
-  --bs-body-bg: #f1eee8;
-  --bs-body-bg-rgb: 241, 238, 232;
-  --bs-secondary-color: #7a7d76;
-  --bs-secondary-color-rgb: 122, 125, 118;
-  --bs-border-color: rgba(32, 37, 33, 0.16);
+  --bs-body-color: var(--ink);
+  --bs-body-color-rgb: var(--ink-rgb);
+  --bs-body-bg: var(--bone);
+  --bs-body-bg-rgb: var(--bone-rgb);
+  --bs-secondary-color: var(--muted);
+  --bs-secondary-color-rgb: var(--muted-rgb);
+  --bs-border-color: var(--line);
   --bs-border-radius: 0;
   --bs-border-radius-sm: 0;
   --bs-border-radius-lg: 0;
   --bs-border-radius-xl: 0;
   --bs-border-radius-xxl: 0;
-  --bs-link-color-rgb: 32, 37, 33;
-  --bs-link-hover-color-rgb: 123, 138, 120;
-  --bs-focus-ring-color: rgba(123, 138, 120, 0.35);
+  --bs-link-color-rgb: var(--ink-rgb);
+  --bs-link-hover-color-rgb: var(--sage-rgb);
+  --bs-focus-ring-color: rgba(var(--sage-rgb), 0.35);
 }
+
+/* ---------- 1b. Tema (dipilih pembaca lewat tombol "Tema"; lihat src/theme.js) ----------
+   Tanpa data-theme = "Otomatis": mengikuti terang/gelap perangkat. Selektor .sw[data-t] memberi warna yang sama pada pratinjau di menu.
+   Menambah tema: satu blok di bawah + satu entri di theme.js. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) { color-scheme: dark; --bone: #191c19; --paper: #20241f; --ink: #ece9e2; --muted: #9a9d94; --line: rgba(236, 233, 226, .16); --sage: #9bab98; --inv: #191c19; --ink-rgb: 236, 233, 226; --bone-rgb: 25, 28, 25; --muted-rgb: 154, 157, 148; --sage-rgb: 155, 171, 152; }
+}
+:root[data-theme="kertas"], .sw[data-t="kertas"] { --bone: #f1eee8; --paper: #faf9f6; --ink: #202521; --muted: #7a7d76; --line: rgba(32, 37, 33, .16); --sage: #7b8a78; --inv: #fff; --ink-rgb: 32, 37, 33; --bone-rgb: 241, 238, 232; --muted-rgb: 122, 125, 118; --sage-rgb: 123, 138, 120; }
+:root[data-theme="sepia"], .sw[data-t="sepia"] { --bone: #f3e9d8; --paper: #faf3e6; --ink: #3b2f22; --muted: #6f5f4d; --line: rgba(59, 47, 34, .18); --sage: #8f5a30; --inv: #fff8ec; --ink-rgb: 59, 47, 34; --bone-rgb: 243, 233, 216; --muted-rgb: 111, 95, 77; --sage-rgb: 143, 90, 48; }
+:root[data-theme="hutan"], .sw[data-t="hutan"] { --bone: #e6ede4; --paper: #f1f6ef; --ink: #1f2d22; --muted: #536456; --line: rgba(31, 45, 34, .17); --sage: #3f6a47; --inv: #f6fbf4; --ink-rgb: 31, 45, 34; --bone-rgb: 230, 237, 228; --muted-rgb: 83, 100, 86; --sage-rgb: 63, 106, 71; }
+:root[data-theme="laut"], .sw[data-t="laut"] { --bone: #e8eef3; --paper: #f3f7fa; --ink: #1c2833; --muted: #566573; --line: rgba(28, 40, 51, .17); --sage: #32657f; --inv: #f6fafc; --ink-rgb: 28, 40, 51; --bone-rgb: 232, 238, 243; --muted-rgb: 86, 101, 115; --sage-rgb: 50, 101, 127; }
+:root[data-theme="senja"], .sw[data-t="senja"] { --bone: #f4e8e4; --paper: #fbf3f0; --ink: #3a2623; --muted: #765e59; --line: rgba(58, 38, 35, .17); --sage: #a04e3f; --inv: #fff6f3; --ink-rgb: 58, 38, 35; --bone-rgb: 244, 232, 228; --muted-rgb: 118, 94, 89; --sage-rgb: 160, 78, 63; }
+:root[data-theme="malam"], .sw[data-t="malam"] { --bone: #191c19; --paper: #20241f; --ink: #ece9e2; --muted: #9a9d94; --line: rgba(236, 233, 226, .16); --sage: #9bab98; --inv: #191c19; --ink-rgb: 236, 233, 226; --bone-rgb: 25, 28, 25; --muted-rgb: 154, 157, 148; --sage-rgb: 155, 171, 152; }
+:root[data-theme="tinta"], .sw[data-t="tinta"] { --bone: #0f1722; --paper: #172131; --ink: #e6ecf5; --muted: #93a1b5; --line: rgba(230, 236, 245, .16); --sage: #7fa6d6; --inv: #0f1722; --ink-rgb: 230, 236, 245; --bone-rgb: 15, 23, 34; --muted-rgb: 147, 161, 181; --sage-rgb: 127, 166, 214; }
+:root[data-theme="malam"], :root[data-theme="tinta"] { color-scheme: dark; }
 
 /* ---------- 2. Dasar ---------- */
 html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
@@ -44,7 +64,7 @@ body { background: var(--bone); color: var(--ink); font-family: var(--bs-body-fo
 button, a { color: inherit; }
 button { font: inherit; cursor: pointer; }
 .shell { width: min(100%, var(--content-width)); margin: 0 auto; padding-inline: var(--page-pad); }
-.skip-link { position: absolute; z-index: 2000; top: .5rem; left: .5rem; padding: .6rem 1rem; background: var(--ink); color: var(--white); font-size: .75rem; letter-spacing: .1em; text-decoration: none; text-transform: uppercase; }
+.skip-link { position: absolute; z-index: 2000; top: .5rem; left: .5rem; padding: .6rem 1rem; background: var(--ink); color: var(--inv); font-size: .75rem; letter-spacing: .1em; text-decoration: none; text-transform: uppercase; }
 .social-link { color: var(--muted); text-decoration: none; transition: color .25s ease; }
 .social-link:hover { color: var(--ink); }
 :is(.social-link, .photo-button, .featured-button, .navbar-brand, .nav-link, .btn):focus-visible { outline: 2px solid var(--sage); outline-offset: 4px; box-shadow: none; }
@@ -58,17 +78,17 @@ button { font: inherit; cursor: pointer; }
   --bs-btn-font-size: .67rem;
   --bs-btn-font-weight: 400;
   --bs-btn-bg: transparent;
-  --bs-btn-focus-shadow-rgb: 123, 138, 120;
+  --bs-btn-focus-shadow-rgb: var(--sage-rgb);
   letter-spacing: .15em;
   text-transform: uppercase;
 }
 .btn-ink {
   --bs-btn-color: var(--ink);
-  --bs-btn-border-color: rgba(32, 37, 33, .35);
-  --bs-btn-hover-color: var(--white);
+  --bs-btn-border-color: color-mix(in srgb, var(--ink) 35%, transparent);
+  --bs-btn-hover-color: var(--inv);
   --bs-btn-hover-bg: var(--ink);
   --bs-btn-hover-border-color: var(--ink);
-  --bs-btn-active-color: var(--white);
+  --bs-btn-active-color: var(--inv);
   --bs-btn-active-bg: var(--ink);
   --bs-btn-active-border-color: var(--ink);
 }
@@ -86,7 +106,7 @@ button { font: inherit; cursor: pointer; }
 /* ---------- 4. Navbar (responsif + menempel di atas) ---------- */
 .site-navbar {
   --bs-navbar-padding-y: .8rem;
-  background: rgba(241, 238, 232, .88);
+  background: color-mix(in srgb, var(--bone) 88%, transparent);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
@@ -297,7 +317,21 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
 .writing-link { display: grid; grid-template-columns: 9rem 1fr; gap: .4rem 2rem; padding: 1.4rem 0; color: var(--ink); text-decoration: none; }
 .writing-meta { color: var(--muted); font-size: .67rem; letter-spacing: .15em; line-height: 1.7; text-transform: uppercase; }
 .writing-title { margin: 0; font-size: clamp(1.15rem, 2vw, 1.55rem); font-weight: 400; letter-spacing: -.03em; line-height: 1.15; }
-.writing-excerpt { margin: .5rem 0 0; max-width: 42rem; color: #5d6059; font-size: .9rem; line-height: 1.5; }
+.writing-excerpt { margin: .5rem 0 0; max-width: 42rem; color: color-mix(in srgb, var(--ink) 72%, var(--bone)); font-size: .9rem; line-height: 1.5; }
 .writing-link:hover .writing-title { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 .writing-link:focus-visible { outline: 2px solid var(--sage); outline-offset: 4px; }
 @media (max-width: 700px) { .writing-link { grid-template-columns: 1fr; } }
+
+/* ---------- Pemilih tema ---------- */
+.site-navbar .tema-btn { background: none; border: 0; text-align: left; }
+.tema-panel { position: fixed; right: var(--page-pad); z-index: 1060; display: grid; gap: .15rem; min-width: 11rem; max-width: calc(100vw - 2 * var(--page-pad)); padding: .4rem; background: var(--paper); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, .14); }
+.tema-panel[hidden] { display: none; }
+.tema-panel button { display: flex; align-items: center; gap: .7rem; width: 100%; padding: .55rem .6rem; border: 0; background: none; color: var(--muted); font-size: .8rem; text-align: left; }
+.tema-panel button:hover { background: var(--bone); color: var(--ink); }
+.tema-panel button:focus-visible { outline: 2px solid var(--sage); outline-offset: -2px; }
+.tema-panel button[aria-pressed="true"] { color: var(--ink); font-weight: 400; }
+.tema-panel button[aria-pressed="true"]::after { margin-left: auto; color: var(--sage); content: "✓"; }
+.sw { position: relative; flex: none; width: 1.5rem; height: 1.5rem; overflow: hidden; border: 1px solid var(--line); border-radius: 50%; background: var(--bone); }
+.sw i { position: absolute; right: 0; bottom: 0; width: 55%; height: 55%; border-radius: 50% 0 0 0; background: var(--sage); }
+.sw[data-t="otomatis"] { background: linear-gradient(90deg, #f1eee8 50%, #191c19 50%); }
+.sw[data-t="otomatis"] i { display: none; }

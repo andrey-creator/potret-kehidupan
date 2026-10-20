@@ -112,6 +112,7 @@ export async function renderPhotoPage(request: Request, env: Env, rawId: string 
   <link rel="stylesheet" href="/assets/vendor/bootstrap.min.css">
   <link rel="stylesheet" href="/assets/vendor/bootstrap-icons/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/assets/styles.css">
+  <script src="/assets/theme.js"></script>
 </head>
 <body>
   ${renderNavbar(lang, { id: photoPath("id", photo.id), en: photoPath("en", photo.id) })}
