@@ -10,6 +10,9 @@ type Strings = {
   homeDescription: string;
   galleryLink: string;
   back: string;
+  backToAlbum: (album: string) => string;
+  previous: string;
+  next: string;
   share: string;
   copied: string;
   copyManually: string;
@@ -28,7 +31,10 @@ export const STRINGS: Record<Lang, Strings> = {
     homeTitle: "Potret Kehidupan — Kepingan hidup dalam gambar.",
     homeDescription: "Potret Kehidupan — kepingan hidup dalam gambar.",
     galleryLink: "/#gallery",
-    back: "← Galeri",
+    back: "Kembali ke galeri",
+    backToAlbum: (album) => `Kembali ke album ${album}`,
+    previous: "Sebelumnya",
+    next: "Berikutnya",
     share: "Bagikan",
     copied: "Tautan disalin.",
     copyManually: "Salin dari kolom alamat browser.",
@@ -45,7 +51,10 @@ export const STRINGS: Record<Lang, Strings> = {
     homeTitle: "Potret Kehidupan — Fragments of life, in pictures.",
     homeDescription: "Potret Kehidupan — fragments of life, in pictures.",
     galleryLink: "/en/#gallery",
-    back: "← Gallery",
+    back: "Back to gallery",
+    backToAlbum: (album) => `Back to album ${album}`,
+    previous: "Previous",
+    next: "Next",
     share: "Share",
     copied: "Link copied.",
     copyManually: "Copy it from the browser address bar.",

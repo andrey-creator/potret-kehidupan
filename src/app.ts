@@ -432,8 +432,22 @@ function setupFilters(): void {
     filterYear.value = "";
     filters.album = "";
     syncAlbumTabs();
+    syncAlbumUrl();
     changed();
   });
+}
+
+/** Menyimpan album yang dipilih di alamat (?album=), agar tombol kembali dari halaman foto membuka album yang sama. */
+function syncAlbumUrl(): void {
+  try {
+    const params = new URLSearchParams(location.search);
+    const button = albumTabs?.querySelector<HTMLButtonElement>(`button[data-album="${CSS.escape(filters.album)}"]`);
+    if (filters.album && button) params.set("album", button.textContent ?? filters.album); else params.delete("album");
+    const query = params.toString();
+    history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
+  } catch {
+    // Abaikan: alamat hanyalah kemudahan tambahan.
+  }
 }
 
 function syncAlbumTabs(): void {
@@ -471,8 +485,15 @@ function setupAlbums(): void {
     filters.album = button.dataset.album ?? "";
     syncAlbumTabs();
     if (filterReset) filterReset.hidden = !isFiltering();
+    syncAlbumUrl();
     applyView();
   });
+  // Tautan dari halaman foto (?album=Nama) langsung membuka album tersebut.
+  const wanted = new URLSearchParams(location.search).get("album")?.trim().toLowerCase() ?? "";
+  if (wanted && albums.has(wanted)) {
+    filters.album = wanted;
+    if (filterReset) filterReset.hidden = false;
+  }
   syncAlbumTabs();
 }
 

@@ -269,8 +269,11 @@ h1::after { display: block; width: .42em; height: .42em; margin-top: .48em; bord
 .photo-story p { margin: 0 0 1.1rem; }
 .photo-share-status { color: var(--muted); font-size: .8rem; }
 .photo-pager { margin-top: clamp(2.5rem, 6vw, 5rem); padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .95rem; }
-.photo-pager a { max-width: 48%; }
+.photo-pager a { display: flex; flex-direction: column; gap: .25rem; max-width: 48%; }
 .photo-pager .next { margin-left: auto; text-align: right; }
+.photo-pager .pager-label { font-size: .67rem; letter-spacing: .15em; text-transform: uppercase; }
+.photo-pager .pager-caption { color: var(--ink); }
+.photo-nav .photo-back { min-width: 0; overflow-wrap: anywhere; }
 
 /* ---------- 11. Responsif ---------- */
 @media (max-width: 860px) {

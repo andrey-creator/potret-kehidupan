@@ -1,4 +1,6 @@
-import { alternateLinks, formatDate, Lang, pick, photoPath, STRINGS } from "./i18n";
+import { getAlbums } from "./albums";
+import { getSettings } from "./gallery-settings";
+import { alternateLinks, formatDate, homePath, Lang, pick, photoPath, STRINGS } from "./i18n";
 import { renderNavbar } from "./navbar";
 import { DETAIL_COLUMN_SETS, queryWithFallback } from "./photos";
 
@@ -23,7 +25,7 @@ type DetailPhoto = {
   story_en?: string | null;
 };
 
-type OrderRow = { id: number; caption: string; caption_en?: string | null };
+type OrderRow = { id: number; caption: string; caption_en?: string | null; taken_at?: string | null };
 
 const escapeHtml = (value: string): string => value
   .replaceAll("&", "&amp;")
@@ -53,24 +55,61 @@ export async function renderPhotoPage(request: Request, env: Env, rawId: string 
 
   let photo: DetailPhoto | undefined;
   let order: OrderRow[] = [];
+  let albums: Awaited<ReturnType<typeof getAlbums>> = {};
+  let galleryOrder = "default";
   try {
     [photo] = await queryWithFallback<DetailPhoto>(DETAIL_COLUMN_SETS, (columns) => env.DB.prepare(
       `SELECT ${columns} FROM photos WHERE id = ? AND is_published = 1`
     ).bind(id));
     if (!photo) return notFound(request, env);
     order = await queryWithFallback<OrderRow>(
-      ["id, caption, caption_en", "id, caption"],
+      ["id, caption, caption_en, taken_at", "id, caption, caption_en", "id, caption"],
       (columns) => env.DB.prepare(`SELECT ${columns} FROM photos WHERE is_published = 1 ORDER BY sort_order ASC, id ASC`)
     );
+    // Album dan urutan galeri hanya pelengkap: jika gagal dimuat, halaman tetap tampil dengan urutan bawaan.
+    [albums, galleryOrder] = await Promise.all([
+      getAlbums(env.DB, true),
+      getSettings(env.DB).then((settings) => settings.gallery_order as string)
+    ]);
   } catch (error) {
     console.error("GET photo page failed", error);
     return new Response("Terjadi kesalahan saat memuat halaman. / Something went wrong.", { status: 500 });
   }
 
+  // Urutan yang sama dengan galeri di beranda (urutan acak tidak bisa ditiru, jadi memakai urutan bawaan).
+  if (galleryOrder === "newest" || galleryOrder === "oldest") {
+    const sign = galleryOrder === "oldest" ? 1 : -1;
+    order = order
+      .map((item, position) => ({ item, position }))
+      .sort((a, b) => {
+        const x = a.item.taken_at ?? "";
+        const y = b.item.taken_at ?? "";
+        if (x && !y) return -1;
+        if (!x && y) return 1;
+        if (x && y && x !== y) return (x < y ? -1 : 1) * sign;
+        return a.position - b.position;
+      })
+      .map(({ item }) => item);
+  }
+
+  // Konteks album: foto sebelumnya/berikutnya dan penghitung hanya dari album yang sama (tanpa album = semua foto).
+  const albumOf = (photoId: number): string => {
+    const entry = albums[String(photoId)];
+    return entry ? pick(lang, entry.album, entry.album_en).trim() : "";
+  };
+  const albumName = albumOf(photo.id);
+  const scope = albumName
+    ? order.filter((item) => albumOf(item.id).toLowerCase() === albumName.toLowerCase())
+    : order;
+
   const origin = new URL(request.url).origin;
-  const index = order.findIndex((item) => item.id === photo.id);
-  const previous = index > 0 ? order[index - 1] : undefined;
-  const next = index >= 0 && index < order.length - 1 ? order[index + 1] : undefined;
+  const index = scope.findIndex((item) => item.id === photo.id);
+  const previous = index > 0 ? scope[index - 1] : undefined;
+  const next = index >= 0 && index < scope.length - 1 ? scope[index + 1] : undefined;
+  const backHref = albumName
+    ? `${homePath(lang)}?album=${encodeURIComponent(albumName)}#gallery`
+    : t.galleryLink;
+  const backLabel = albumName ? t.backToAlbum(albumName) : t.back;
 
   const caption = pick(lang, photo.caption, photo.caption_en);
   const alt = pick(lang, photo.alt, photo.alt_en);
@@ -118,8 +157,8 @@ export async function renderPhotoPage(request: Request, env: Env, rawId: string 
   ${renderNavbar(lang, { id: photoPath("id", photo.id), en: photoPath("en", photo.id) })}
   <main class="shell photo-view">
     <nav class="photo-nav d-flex align-items-baseline justify-content-between gap-3" aria-label="${escapeHtml(t.navLabel)}">
-      <a href="${t.galleryLink}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>${escapeHtml(t.back)}</a>
-      ${index >= 0 ? `<span>${pad(index + 1)} / ${pad(order.length)}</span>` : ""}
+      <a class="photo-back" href="${escapeHtml(backHref)}"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i>${escapeHtml(backLabel)}</a>
+      ${index >= 0 ? `<span>${pad(index + 1)} / ${pad(scope.length)}</span>` : ""}
     </nav>
     <figure class="photo-figure">
       <img src="${escapeHtml(photo.src)}" alt="${escapeHtml(alt)}"${sizeAttributes} decoding="async" fetchpriority="high">
@@ -136,8 +175,8 @@ export async function renderPhotoPage(request: Request, env: Env, rawId: string 
       </div>
     </section>
     <nav class="photo-pager d-flex justify-content-between gap-3" aria-label="${escapeHtml(t.pagerLabel)}">
-      ${previous ? `<a class="prev" rel="prev" href="${photoPath(lang, previous.id)}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>${neighborCaption(previous)}</a>` : "<span></span>"}
-      ${next ? `<a class="next" rel="next" href="${photoPath(lang, next.id)}">${neighborCaption(next)}<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></a>` : ""}
+      ${previous ? `<a class="prev" rel="prev" href="${photoPath(lang, previous.id)}"><span class="pager-label"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>${escapeHtml(t.previous)}</span><span class="pager-caption">${neighborCaption(previous)}</span></a>` : "<span></span>"}
+      ${next ? `<a class="next" rel="next" href="${photoPath(lang, next.id)}"><span class="pager-label">${escapeHtml(t.next)}<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></span><span class="pager-caption">${neighborCaption(next)}</span></a>` : ""}
     </nav>
   </main>
   <div class="toast-container position-fixed bottom-0 start-50 translate-middle-x p-3">
@@ -155,6 +194,14 @@ export async function renderPhotoPage(request: Request, env: Env, rawId: string 
       var status = document.getElementById("shareStatus");
       var toast = document.getElementById("shareToast");
       var toastText = document.getElementById("shareToastText");
+      // Panah kiri/kanan pindah ke foto sebelumnya/berikutnya (tidak aktif saat mengetik atau memakai tombol modifier).
+      document.addEventListener("keydown", function (event) {
+        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        var target = event.target;
+        if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+        var link = document.querySelector(event.key === "ArrowLeft" ? ".photo-pager a[rel=prev]" : event.key === "ArrowRight" ? ".photo-pager a[rel=next]" : "");
+        if (link) location.href = link.href;
+      });
       if (!button) return;
       var copied = ${JSON.stringify(t.copied)};
       var manual = ${JSON.stringify(t.copyManually)};
