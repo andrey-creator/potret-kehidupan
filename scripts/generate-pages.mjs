@@ -52,6 +52,7 @@ const TEXT = {
     footerLinks: "Tautan media sosial",
     lightboxLabel: "Tampilan foto besar",
     close: "Tutup tampilan foto",
+    backGallery: "Kembali ke galeri",
     openPage: "Buka halaman foto",
     readMore: "Baca selengkapnya",
     share: "Bagikan",
@@ -100,6 +101,7 @@ const TEXT = {
     footerLinks: "Social media links",
     lightboxLabel: "Enlarged photo view",
     close: "Close photo view",
+    backGallery: "Back to gallery",
     openPage: "Open photo page",
     readMore: "Read more",
     share: "Share",
@@ -231,8 +233,13 @@ function page(t) {
         <div class="modal-body">
           <div class="lightbox-panel">
             <button class="btn btn-outline-light rounded-circle lightbox-close" id="lightboxClose" type="button" data-bs-dismiss="modal" aria-label="${t.close}"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
-            <div class="lightbox-image-wrap" id="lightboxBackdrop">
-              <img class="lightbox-image" id="lightboxImage" src="" alt="">
+            <button class="btn btn-outline-light lightbox-back" id="lightboxBack" type="button" data-bs-dismiss="modal"><i class="bi bi-arrow-left me-2" aria-hidden="true"></i><span id="lightboxBackText">${t.backGallery}</span></button>
+            <div class="lightbox-stage">
+              <div class="lightbox-image-wrap" id="lightboxBackdrop">
+                <img class="lightbox-image" id="lightboxImage" src="" alt="">
+              </div>
+              <button class="btn lightbox-edge is-prev" id="lightboxEdgePrevious" type="button" aria-label="${t.prev}"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+              <button class="btn lightbox-edge is-next" id="lightboxEdgeNext" type="button" aria-label="${t.next}"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
             </div>
             <div class="lightbox-side">
               <p class="lightbox-caption" id="lightboxCaption"></p>

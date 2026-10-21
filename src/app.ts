@@ -22,6 +22,8 @@ const TEXT = {
     viewFeatured: (caption: string) => `Lihat foto unggulan: ${caption}`,
     featuredTag: "Pilihan",
     hint: "Klik untuk melihat",
+    backToGallery: "Kembali ke galeri",
+    backToAlbum: (album: string) => `Kembali ke album ${album}`,
     loadFailed: "Galeri belum bisa dimuat. Muat ulang halaman beberapa saat lagi.",
     empty: "Belum ada momen yang ditampilkan.",
     copied: "Tautan disalin.",
@@ -38,6 +40,8 @@ const TEXT = {
     viewFeatured: (caption: string) => `View featured photo: ${caption}`,
     featuredTag: "Featured",
     hint: "Click to view",
+    backToGallery: "Back to gallery",
+    backToAlbum: (album: string) => `Back to album ${album}`,
     loadFailed: "The gallery could not be loaded. Please reload the page in a moment.",
     empty: "No moments to show yet.",
     copied: "Link copied.",
@@ -78,6 +82,9 @@ const lightboxStoryText = document.querySelector<HTMLElement>("#lightboxStoryTex
 const lightboxReadMore = document.querySelector<HTMLAnchorElement>("#lightboxReadMore");
 const lightboxLink = document.querySelector<HTMLAnchorElement>("#lightboxLink");
 const lightboxShare = document.querySelector<HTMLButtonElement>("#lightboxShare");
+const lightboxBackText = document.querySelector<HTMLElement>("#lightboxBackText");
+const lightboxEdgePrevious = document.querySelector<HTMLButtonElement>("#lightboxEdgePrevious");
+const lightboxEdgeNext = document.querySelector<HTMLButtonElement>("#lightboxEdgeNext");
 const lightboxClose = document.querySelector<HTMLButtonElement>("#lightboxClose");
 const lightboxPrevious = document.querySelector<HTMLButtonElement>("#lightboxPrevious");
 const lightboxNext = document.querySelector<HTMLButtonElement>("#lightboxNext");
@@ -613,6 +620,14 @@ function showLightbox(index: number, trigger?: HTMLElement | null): void {
     if (item.id) lightboxLink.href = photoUrl(item.id);
   }
   if (lightboxShare) lightboxShare.hidden = !item.id;
+  // Tombol kembali menyebut album yang sedang dibuka (tab album aktif); tanpa album = galeri.
+  if (lightboxBackText) {
+    const tab = filters.album ? albumTabs?.querySelector<HTMLButtonElement>(`button[data-album="${CSS.escape(filters.album)}"]`) : null;
+    lightboxBackText.textContent = tab?.textContent ? TEXT.backToAlbum(tab.textContent) : TEXT.backToGallery;
+  }
+  const single = photos.length < 2;
+  if (lightboxEdgePrevious) lightboxEdgePrevious.hidden = single;
+  if (lightboxEdgeNext) lightboxEdgeNext.hidden = single;
   preloadNeighbors(activeIndex);
   if (playing) scheduleSlide();
   if (!lightboxOpen) {
@@ -1001,6 +1016,8 @@ slideshowStart?.addEventListener("click", () => {
 });
 lightboxPrevious?.addEventListener("click", () => moveLightbox(-1));
 lightboxNext?.addEventListener("click", () => moveLightbox(1));
+lightboxEdgePrevious?.addEventListener("click", () => moveLightbox(-1));
+lightboxEdgeNext?.addEventListener("click", () => moveLightbox(1));
 lightboxPlay?.addEventListener("click", () => { if (playing) stopSlideshow(); else startSlideshow(); });
 lightboxShare?.addEventListener("click", () => { void shareCurrent(); });
 // Klik di area kosong mengelilingi foto menutup lightbox.
